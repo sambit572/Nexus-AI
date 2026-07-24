@@ -2,6 +2,7 @@ import express from "express";
 import "dotenv/config";
 import cors from "cors";
 import mongoose from "mongoose";
+import chatRoutes from "./routes/chat.js";
 
 
 const app=express();
@@ -9,6 +10,8 @@ const PORT=8080;
 
 app.use(express.json());
 app.use(cors());
+
+app.use("/api",chatRoutes);
 
 // app.post("/test", async (req, res) => {
 //   // 1. Dynamic extraction: checks 'prompt', 'message', or 'text' from frontend payload
