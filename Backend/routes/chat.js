@@ -1,5 +1,6 @@
  import express from "express";
  import Thread from "../models/Thread.js";
+ import getNexusAiApiResponse from "../utils/nexuai.js";
 
  const router=express.Router();
 
@@ -60,4 +61,33 @@
     }
  });
 
-export default router;
+ //to get resonse,post route
+ router.post("/chat",async(req,res)=>{
+    const {threadId,message}=req.body;
+    if(!threadId || !message){
+        res.status(400).json({error:"missing require fields"});
+    }
+    try{
+        const thread=await Thread.findOne({threadId});
+        if(!thread){
+            thread=new Thread({
+               threadId,
+               title:message,
+               messages:[{role:"user",content:message}] 
+            });
+        } else {
+            thread.messages.push({role:"user",content:message});
+        }
+
+        const geminiReplay=getNexusAiApiResponse(message);
+        thread.messages.push({role:"assitant",content:geminiReplay});
+        thread.updatedAt=new Date();
+        await thread.save();
+        res.json({reply:geminiReplay});
+    } catch(err){
+        console.log(err);
+        res.status(500).json({error:"Something Went Wrong"});
+    }
+ });
+
+export default router;   
