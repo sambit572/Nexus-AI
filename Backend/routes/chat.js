@@ -79,7 +79,7 @@
             thread.messages.push({role:"user",content:message});
         }
 
-        const geminiReplay=getNexusAiApiResponse(message);
+        const geminiReplay=await getNexusAiApiResponse(message);
         thread.messages.push({role:"assitant",content:geminiReplay});
         thread.updatedAt=new Date();
         await thread.save();
