@@ -19,4 +19,45 @@
     }
  });
 
+ //to get all Chat
+ router.get("/thread",async(req,res)=>{
+    try{
+        const threads=await Thread.find({}).sort({updatedAt:-1});
+        res.json(threads);
+    } catch(err){
+        console.log(err);
+        res.status(500).json({error:"Failed to Fetch"});
+    }
+ });
+
+ //to get information of a perticular user
+ router.get("/thread/:threadId",async(req,res)=>{
+    const {threadId}=req.params;
+    try{
+        const thread=await Thread.find({threadId});
+        if(!thread){
+            res.status(404).json({error:"thread not found"});
+        }
+        res.json(thread.messages);;
+    } catch(err){
+        console.log(err);
+        res.status(500).json({error:"Failed to find Chat"});
+    }
+ });
+
+ //to delete a chat
+ router.delete("/thread/:threadId",async(req,res)=>{
+    const {threadId}=req.params;
+    try{
+        const deletedThread=await Thread.findOneAndDelete({threadId});
+        if(!deletedThread){
+            res.status(404).json({error:"thread could not be deleted"});
+        }
+        res.status(200).json({success:"thread deleted successfully"});
+    } catch(err){
+        console.log(err);
+        res.status(500).json({error:"Failed to delete Chat"});
+    }
+ });
+
 export default router;
