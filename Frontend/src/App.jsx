@@ -7,10 +7,10 @@ function App() {
   const providerValue={};
   return (
     <div className="app">
-      <MyContext.provider value={providerValue}>
+      <MyContext.Provider value={providerValue}>
         <Sidebar></Sidebar>
         <ChatWindow></ChatWindow>
-      </MyContext.provider>
+      </MyContext.Provider>
     </div>
   )
 }
