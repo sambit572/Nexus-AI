@@ -4,8 +4,8 @@ function Sidebar(){
     return (
         <section className="sidebar">
             <button>
-                <img></img>
-                <i className="fa-solid fa-pen-to-square"></i>
+                <img className="logo"></img>
+                <span><i className="fa-solid fa-pen-to-square"></i></span>
             </button>
             {/* history */}
             <ul className="history">
