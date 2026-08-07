@@ -68,7 +68,7 @@
         res.status(400).json({error:"missing require fields"});
     }
     try{
-        const thread=await Thread.findOne({threadId});
+        let thread=await Thread.findOne({threadId});
         if(!thread){
             thread=new Thread({
                threadId,
