@@ -42,10 +42,21 @@ function Chat(){
                 }
 
                 {
-                    preChats?.length > 0 && latestReply !== null &&
-                    <div className="nexusDiv" key={"typing"}>
-                        <ReactMarkdown rehypePlugins={[rehypeHighlight]}>{latestReply}</ReactMarkdown>
-                    </div>
+                    preChats?.length >0 && (
+                        <>
+                            {
+                                latestReply === null ? (
+                                    <div className="nexusDiv" key={"typing"}>
+                                        <ReactMarkdown rehypePlugins={[rehypeHighlight]}>{preChats[preChats.length - 1].content}</ReactMarkdown>
+                                    </div>
+                                ) : (
+                                    <div className="nexusDiv" key={"typing"}>
+                                        <ReactMarkdown rehypePlugins={[rehypeHighlight]}>{latestReply}</ReactMarkdown>
+                                    </div>
+                                )
+                            }
+                        </>
+                    )
                 }
                 
             </div>

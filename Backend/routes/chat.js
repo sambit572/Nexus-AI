@@ -35,16 +35,16 @@
  router.get("/thread/:threadId",async(req,res)=>{
     const {threadId}=req.params;
     try{
-        const thread=await Thread.find({threadId});
+        const thread=await Thread.findOne({threadId});
         if(!thread){
-            res.status(404).json({error:"thread not found"});
+            return res.status(404).json({error:"thread not found"});
         }
-        res.json(thread.messages);;
+        res.json(thread.messages);
     } catch(err){
         console.log(err);
         res.status(500).json({error:"Failed to find Chat"});
     }
- });
+});
 
  //to delete a chat
  router.delete("/thread/:threadId",async(req,res)=>{

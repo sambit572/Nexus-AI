@@ -6,10 +6,13 @@ import {ScaleLoader} from "react-spinners";
 
 function ChatWindow(){
 
-    const {prompt,setPrompt,reply,setReply,currThreadId,preChats,setPreChats}=useContext(MyContext);
+    const {prompt,setPrompt,reply,setReply,currThreadId,preChats,setPreChats,newChats,setNewChats}=useContext(MyContext);
     const [loading,setLoading]=useState(false);
+    const [isOpen,setIsOpen]=useState(false);
+
     const getReply=async()=>{
         setLoading(true);
+        setNewChats(false);
         console.log("message",prompt),"threadId",currThreadId;
         const options={
             method:"POST",
@@ -51,10 +54,20 @@ function ChatWindow(){
         <div className="chatWindow">
             <div className="navbar">
                 <span>Nexus AI <i className="fa-solid fa-chevron-down"></i></span>
-                <div className="userIconDiv">
+                <div className="userIconDiv" onClick={()=>{
+                    setIsOpen(!isOpen);
+                }}>
                     <span className="userIcon"><i className="fa-solid fa-user"></i></span>
                 </div>
             </div>
+            {
+                isOpen &&
+                <div className="dropDown">
+                    <div className="dropDownItem"><i className="fa-solid fa-cloud-arrow-up"></i>Upgrade</div>
+                    <div className="dropDownItem"><i className="fa-solid fa-gear"></i>Settings</div>
+                    <div className="dropDownItem"><i className="fa-solid fa-sign-out"></i>Logout</div>
+                </div>
+            }
             <Chat></Chat>
 
             <ScaleLoader color="#fff" loading={loading}>
