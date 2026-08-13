@@ -4,6 +4,7 @@ import cors from "cors";
 import mongoose from "mongoose";
 import chatRoutes from "./routes/chat.js";
 import authRoutes from "./routes/auth.js";
+import { generalLimiter } from "./middleware/rateLimiter.js";
 
 
 const app=express();
@@ -11,6 +12,10 @@ const PORT=8080;
 
 app.use(express.json());
 app.use(cors());
+
+// Baseline rate limit for all API routes. Individual routes below
+// (chat, auth) layer stricter limiters on top of this.
+app.use("/api",generalLimiter);
 
 app.use("/api",chatRoutes);
 app.use("/api/auth",authRoutes);

@@ -1,6 +1,6 @@
 * {
-    color: #ececec;
-    font-family: Roboto, 'Open Sans', 'Helvetica Neue', sans-serif;
+    color: var(--text-hi);
+    font-family: var(--font-body);
 }
 
 body {
@@ -8,7 +8,51 @@ body {
     padding: 0;
 }
 
-.app{
-    background-color: #212121;
+.app {
+    background: var(--bg-void);
     display: flex;
+    position: relative;
+    height: 100vh;
+    overflow: hidden;
+    perspective: 1200px;
+    transition: background 0.35s ease;
+}
+
+/* Animated ambient gradient blobs - gives the whole app a "3D lit" backdrop */
+.app::before,
+.app::after {
+    content: "";
+    position: fixed;
+    width: 45vw;
+    height: 45vw;
+    border-radius: 50%;
+    filter: blur(110px);
+    opacity: 0.35;
+    z-index: 0;
+    pointer-events: none;
+    animation: floatBlob 16s ease-in-out infinite;
+    transition: opacity 0.35s ease;
+}
+
+[data-theme="light"] .app::before,
+[data-theme="light"] .app::after {
+    opacity: 0.16;
+}
+
+.app::before {
+    top: -10%;
+    left: -5%;
+    background: radial-gradient(circle at 30% 30%, var(--accent-1), transparent 70%);
+}
+
+.app::after {
+    bottom: -15%;
+    right: -5%;
+    background: radial-gradient(circle at 70% 70%, var(--accent-2), transparent 70%);
+    animation-delay: -8s;
+}
+
+.app > * {
+    position: relative;
+    z-index: 1;
 }

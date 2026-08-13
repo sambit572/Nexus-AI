@@ -1,8 +1,23 @@
  import express from "express";
+ import multer from "multer";
  import Thread from "../models/Thread.js";
  import getNexusAiApiResponse from "../utils/nexuai.js";
+ import { chatLimiter } from "../middleware/rateLimiter.js";
 
  const router=express.Router();
+
+ // Images are kept in memory just long enough to base64-encode them for
+ // Gemini and store a data URL in Mongo - nothing is written to disk.
+ const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 4 * 1024 * 1024 }, // 4MB per image
+    fileFilter: (req, file, cb) => {
+        if (!file.mimetype.startsWith("image/")) {
+            return cb(new Error("Only image files are allowed."));
+        }
+        cb(null, true);
+    }
+ });
 
  //test route
  router.post("/test",async(req,res)=>{
@@ -62,24 +77,55 @@
  });
 
  //to get resonse,post route
- router.post("/chat",async(req,res)=>{
+ router.post("/chat",chatLimiter,(req,res,next)=>{
+    // Wrap multer so a bad/oversized image returns a clean JSON 400
+    // instead of an unhandled exception.
+    upload.single("image")(req,res,(err)=>{
+        if(err){
+            const message = err.code === "LIMIT_FILE_SIZE"
+                ? "Image is too large. Please upload an image under 4MB."
+                : err.message || "Failed to process the uploaded image.";
+            return res.status(400).json({error:message});
+        }
+        next();
+    });
+ },async(req,res)=>{
     const {threadId,message}=req.body;
-    if(!threadId || !message){
-        res.status(400).json({error:"missing require fields"});
+    const imageFile=req.file;
+
+    if(!threadId || (!message && !imageFile)){
+        return res.status(400).json({error:"missing require fields"});
     }
+
+    // Build the base64 image payload (if any) once, so it can be reused
+    // both for the Gemini call and for what we persist to Mongo.
+    let imagePayload=null;
+    let imageDataUrl=null;
+    if(imageFile){
+        const base64Data=imageFile.buffer.toString("base64");
+        imagePayload={ mimeType:imageFile.mimetype, data:base64Data };
+        imageDataUrl=`data:${imageFile.mimetype};base64,${base64Data}`;
+    }
+
     try{
         let thread=await Thread.findOne({threadId});
+        const userMessage={
+            role:"user",
+            content: message || "(sent an image)",
+            image: imageDataUrl
+        };
+
         if(!thread){
             thread=new Thread({
                threadId,
-               title:message,
-               messages:[{role:"user",content:message}] 
+               title: message || "Image chat",
+               messages:[userMessage]
             });
         } else {
-            thread.messages.push({role:"user",content:message});
+            thread.messages.push(userMessage);
         }
 
-        const geminiReplay=await getNexusAiApiResponse(message);
+        const geminiReplay=await getNexusAiApiResponse(message, imagePayload);
         thread.messages.push({role:"assitant",content:geminiReplay});
         thread.updatedAt=new Date();
         await thread.save();

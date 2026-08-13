@@ -10,6 +10,10 @@ const MessageSchema=new mongoose.Schema({
         type:String,
         required:true
     },
+    image:{
+        type:String, // stores a data URL (e.g. "data:image/png;base64,...") for display in chat history
+        default:null
+    },
     timestamp:{
         type:Date,
         default:Date.now
