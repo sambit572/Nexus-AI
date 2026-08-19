@@ -325,3 +325,14 @@ input:focus {
     color: var(--text-hi);
     transform: translateX(2px);
 }
+
+.exportDiv {
+    position: relative;
+}
+
+.exportDropDown {
+    position: absolute;
+    top: 3rem;
+    right: 0;
+    width: 200px;
+}

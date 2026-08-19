@@ -3,6 +3,7 @@ import Chat from "./Chat.jsx";
 import { MyContext } from "./MyContext.jsx";
 import { useContext,useState,useEffect,useRef} from "react";
 import {ScaleLoader} from "react-spinners";
+import { exportChatAsMarkdown, exportChatAsPDF } from "./exportChat.js";
 
 const MAX_IMAGE_MB = 4;
 
@@ -11,6 +12,7 @@ function ChatWindow(){
     const {prompt,setPrompt,reply,setReply,currThreadId,preChats,setPreChats,newChats,setNewChats,theme,toggleTheme}=useContext(MyContext);
     const [loading,setLoading]=useState(false);
     const [isOpen,setIsOpen]=useState(false);
+    const [exportOpen,setExportOpen]=useState(false);
     const [image,setImage]=useState(null);           // File object staged for the next send
     const [imagePreview,setImagePreview]=useState(null); // data URL, shown in the composer
     const [sentImagePreview,setSentImagePreview]=useState(null); // carried into preChats once the reply lands
@@ -111,6 +113,36 @@ function ChatWindow(){
             <div className="navbar">
                 <span>Nexus AI <i className="fa-solid fa-chevron-down"></i></span>
                 <div className="navRight">
+                    <div className="exportDiv">
+                        <button
+                            className="themeToggle"
+                            onClick={()=>{
+                                setExportOpen(!exportOpen);
+                                setIsOpen(false);
+                            }}
+                            aria-label="Export conversation"
+                            title="Export conversation"
+                        >
+                            <i className="fa-solid fa-download"></i>
+                        </button>
+                        {
+                            exportOpen &&
+                            <div className="dropDown exportDropDown">
+                                <div
+                                    className="dropDownItem"
+                                    onClick={()=>{ exportChatAsPDF(preChats); setExportOpen(false); }}
+                                >
+                                    <i className="fa-solid fa-file-pdf"></i>Download as PDF
+                                </div>
+                                <div
+                                    className="dropDownItem"
+                                    onClick={()=>{ exportChatAsMarkdown(preChats); setExportOpen(false); }}
+                                >
+                                    <i className="fa-solid fa-file-lines"></i>Download as Markdown
+                                </div>
+                            </div>
+                        }
+                    </div>
                     <button
                         className="themeToggle"
                         onClick={toggleTheme}
@@ -121,6 +153,7 @@ function ChatWindow(){
                     </button>
                     <div className="userIconDiv" onClick={()=>{
                         setIsOpen(!isOpen);
+                        setExportOpen(false);
                     }}>
                         <span className="userIcon"><i className="fa-solid fa-user"></i></span>
                     </div>
