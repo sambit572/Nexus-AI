@@ -6,9 +6,10 @@ import "dotenv/config";
  *
  * @param {string} message - The clean string prompt passed from your controller. Can be an empty string if an image is provided.
  * @param {{mimeType: string, data: string}|null} [image] - Optional image part. `data` must be a base64-encoded string (no data URL prefix).
+ * @param {string} [systemPrompt] - Optional system instruction that sets the AI persona's behavior for this reply.
  * @returns {Promise<string>} - The raw text response string from Gemini
  */
-const getNexusAiApiResponse = async (message, image = null) => {
+const getNexusAiApiResponse = async (message, image = null, systemPrompt = null) => {
   // 1. Validate that we actually have something to send - either text
   // or an image (or both).
   const hasText = typeof message === "string" && message.trim().length > 0;
@@ -35,19 +36,27 @@ const getNexusAiApiResponse = async (message, image = null) => {
     }
   }
 
+  const body = {
+    contents: [
+      {
+        parts
+      }
+    ]
+  };
+
+  // systemInstruction steers the model's persona/behavior without polluting
+  // the visible conversation turns.
+  if (typeof systemPrompt === "string" && systemPrompt.trim().length > 0) {
+    body.systemInstruction = { parts: [{ text: systemPrompt }] };
+  }
+
   const options = {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "x-goog-api-key": process.env.GEMINI_API_KEY
     },
-    body: JSON.stringify({
-      contents: [
-        {
-          parts
-        }
-      ]
-    })
+    body: JSON.stringify(body)
   };
 
   try {

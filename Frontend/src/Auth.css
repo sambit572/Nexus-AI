@@ -1,0 +1,281 @@
+.authPage {
+    height: 100vh;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    background: var(--bg-void);
+    padding: 24px;
+}
+
+.authBlobs {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+}
+
+.blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: 0.4;
+    animation: floatBlob 14s ease-in-out infinite;
+}
+
+[data-theme="light"] .blob {
+    opacity: 0.22;
+}
+
+.blobOne {
+    width: 40vw;
+    height: 40vw;
+    top: -10%;
+    left: -8%;
+    background: radial-gradient(circle at 30% 30%, var(--accent-1), transparent 70%);
+}
+
+.blobTwo {
+    width: 34vw;
+    height: 34vw;
+    bottom: -12%;
+    right: -6%;
+    background: radial-gradient(circle at 70% 70%, var(--accent-2), transparent 70%);
+    animation-delay: -5s;
+}
+
+.blobThree {
+    width: 26vw;
+    height: 26vw;
+    top: 40%;
+    left: 60%;
+    background: radial-gradient(circle at 50% 50%, var(--accent-3), transparent 70%);
+    animation-delay: -9s;
+    opacity: 0.25;
+}
+
+.authCard {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 420px;
+    background: var(--bg-panel);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(22px);
+    border-radius: var(--radius-lg);
+    padding: 2.4rem 2.2rem 2rem;
+    box-shadow: var(--shadow-soft), 0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+    animation: authCardIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes authCardIn {
+    from { opacity: 0; transform: translateY(24px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.authBrand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 1.6rem;
+}
+
+.authLogo {
+    height: 38px;
+    width: 38px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+    color: #fff;
+    font-size: 16px;
+    box-shadow: 0 8px 22px -8px rgba(124, 92, 255, 0.7);
+    animation: pulseGlow 2.6s ease-in-out infinite;
+}
+
+.authBrandName {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.15rem;
+    background: linear-gradient(120deg, var(--text-hi), var(--accent-2) 50%, var(--accent-1));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.authHeading {
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    font-weight: 700;
+    text-align: center;
+    margin: 0 0 6px;
+    color: var(--text-hi);
+    animation: fadeUp 0.5s ease both;
+}
+
+.authSubtext {
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--text-low);
+    margin: 0 0 1.8rem;
+    animation: fadeUp 0.55s ease both;
+}
+
+.authForm {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.authFieldsSlide {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.authField {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    padding: 13px 14px;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease;
+    animation: fadeUp 0.4s ease both;
+}
+
+.authField:focus-within {
+    border-color: rgba(124, 92, 255, 0.55);
+    box-shadow: 0 0 0 4px rgba(124, 92, 255, 0.14);
+    transform: translateY(-1px);
+}
+
+.authField i:first-child {
+    color: var(--text-low);
+    font-size: 0.85rem;
+    width: 16px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.authField input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    background: transparent;
+    color: var(--text-hi);
+    font-size: 0.92rem;
+    padding: 0;
+}
+
+.authField input:focus {
+    outline: none;
+}
+
+.authField input::placeholder {
+    color: var(--text-low);
+}
+
+.togglePw {
+    cursor: pointer;
+    color: var(--text-low);
+    font-size: 0.8rem;
+    transition: color 0.2s ease;
+    flex-shrink: 0;
+}
+
+.togglePw:hover {
+    color: var(--text-mid);
+}
+
+.authError {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--accent-3);
+    font-size: 0.8rem;
+    margin: 0;
+    padding: 10px 12px;
+    background: rgba(255, 92, 173, 0.1);
+    border: 1px solid rgba(255, 92, 173, 0.25);
+    border-radius: var(--radius-sm);
+    animation: fadeUp 0.3s ease both;
+}
+
+.authSubmitBtn {
+    margin-top: 6px;
+    border: none;
+    cursor: pointer;
+    padding: 14px;
+    border-radius: var(--radius-md);
+    font-size: 0.95rem;
+    font-weight: 600;
+    font-family: var(--font-body);
+    color: #fff;
+    background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+    box-shadow: 0 12px 28px -10px rgba(124, 92, 255, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+.authSubmitBtn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 34px -10px rgba(124, 92, 255, 0.85);
+    filter: brightness(1.06);
+}
+
+.authSubmitBtn:active:not(:disabled) {
+    transform: translateY(0) scale(0.98);
+}
+
+.authSubmitBtn:disabled {
+    opacity: 0.75;
+    cursor: not-allowed;
+}
+
+.authSwitch {
+    text-align: center;
+    margin: 1.5rem 0 0;
+    font-size: 0.85rem;
+    color: var(--text-low);
+}
+
+.authSwitch span {
+    color: var(--accent-2);
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.authSwitch span:hover {
+    color: var(--accent-1);
+    text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+    .authPage {
+        padding: 16px;
+    }
+
+    .authCard {
+        padding: 2rem 1.4rem 1.6rem;
+        border-radius: var(--radius-md);
+    }
+
+    .authHeading {
+        font-size: 1.35rem;
+    }
+
+    .blobOne, .blobTwo {
+        width: 70vw;
+        height: 70vw;
+    }
+}

@@ -3,8 +3,14 @@
  import Thread from "../models/Thread.js";
  import getNexusAiApiResponse from "../utils/nexuai.js";
  import { chatLimiter } from "../middleware/rateLimiter.js";
+ import { PERSONAS, DEFAULT_PERSONA } from "../utils/personas.js";
+ import authMiddleware from "../middleware/auth.js";
 
  const router=express.Router();
+
+ // Every route below deals with a signed-in user's own threads, so require
+ // a valid token for all of them.
+ router.use(authMiddleware);
 
  // Images are kept in memory just long enough to base64-encode them for
  // Gemini and store a data URL in Mongo - nothing is written to disk.
@@ -19,26 +25,10 @@
     }
  });
 
- //test route
- router.post("/test",async(req,res)=>{
-    try{
-        const thread=new Thread({
-            threadId:"abc",
-            title:"testing"
-        });
-        const responce=await thread.save();
-        res.send(responce);
-    } catch(err){
-        console.log(err);
-        res.status(500).json({error:"failed to save in DB"});
-        
-    }
- });
-
- //to get all Chat
+ //to get all Chat (scoped to the logged-in user)
  router.get("/thread",async(req,res)=>{
     try{
-        const threads=await Thread.find({}).sort({updatedAt:-1});
+        const threads=await Thread.find({userId:req.user.id}).sort({updatedAt:-1});
         res.json(threads);
     } catch(err){
         console.log(err);
@@ -50,7 +40,7 @@
  router.get("/thread/:threadId",async(req,res)=>{
     const {threadId}=req.params;
     try{
-        const thread=await Thread.findOne({threadId});
+        const thread=await Thread.findOne({threadId,userId:req.user.id});
         if(!thread){
             return res.status(404).json({error:"thread not found"});
         }
@@ -65,7 +55,7 @@
  router.delete("/thread/:threadId",async(req,res)=>{
     const {threadId}=req.params;
     try{
-        const deletedThread=await Thread.findOneAndDelete({threadId});
+        const deletedThread=await Thread.findOneAndDelete({threadId,userId:req.user.id});
         if(!deletedThread){
             res.status(404).json({error:"thread could not be deleted"});
         }
@@ -74,6 +64,17 @@
         console.log(err);
         res.status(500).json({error:"Failed to delete Chat"});
     }
+ });
+
+ //to get available personas
+ router.get("/personas",(req,res)=>{
+    const list = Object.entries(PERSONAS).map(([id,p])=>({
+        id,
+        name: p.name,
+        description: p.description,
+        icon: p.icon
+    }));
+    res.json({ personas:list, default: DEFAULT_PERSONA });
  });
 
  //to get resonse,post route
@@ -90,12 +91,17 @@
         next();
     });
  },async(req,res)=>{
-    const {threadId,message}=req.body;
+    const {threadId,message,persona}=req.body;
     const imageFile=req.file;
 
     if(!threadId || (!message && !imageFile)){
         return res.status(400).json({error:"missing require fields"});
     }
+
+    // Fall back to the default persona for unknown/missing ids instead of
+    // erroring out, so older frontend builds without persona support still work.
+    const personaId = PERSONAS[persona] ? persona : DEFAULT_PERSONA;
+    const systemPrompt = PERSONAS[personaId].systemPrompt;
 
     // Build the base64 image payload (if any) once, so it can be reused
     // both for the Gemini call and for what we persist to Mongo.
@@ -108,7 +114,7 @@
     }
 
     try{
-        let thread=await Thread.findOne({threadId});
+        let thread=await Thread.findOne({threadId,userId:req.user.id});
         const userMessage={
             role:"user",
             content: message || "(sent an image)",
@@ -118,14 +124,16 @@
         if(!thread){
             thread=new Thread({
                threadId,
+               userId: req.user.id,
                title: message || "Image chat",
+               persona: personaId,
                messages:[userMessage]
             });
         } else {
             thread.messages.push(userMessage);
         }
 
-        const geminiReplay=await getNexusAiApiResponse(message, imagePayload);
+        const geminiReplay=await getNexusAiApiResponse(message, imagePayload, systemPrompt);
         thread.messages.push({role:"assitant",content:geminiReplay});
         thread.updatedAt=new Date();
         await thread.save();

@@ -214,3 +214,38 @@ h1 {
 pre {
     white-space: pre-wrap;
 }
+
+@media (max-width: 640px) {
+    h1 {
+        margin-top: 10vh;
+        font-size: clamp(1.6rem, 7vw, 2.2rem);
+        padding: 0 0.5rem;
+    }
+
+    .chats {
+        width: 100vw;
+        padding: 1.5rem 0.85rem 7rem;
+    }
+
+    .userMessage {
+        max-width: 82vw;
+    }
+
+    .chatImageAttachment {
+        max-width: 60vw;
+        max-height: 220px;
+    }
+
+    .nexusDiv {
+        padding-left: 1.8rem;
+        font-size: 0.9rem;
+    }
+
+    .editBox {
+        max-width: 100%;
+    }
+
+    .regenIcon {
+        margin-left: 1.8rem;
+    }
+}

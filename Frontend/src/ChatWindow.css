@@ -13,10 +13,39 @@
 .navbar {
     width: 100%;
     display: flex;
+    flex-wrap: nowrap;
     justify-content: space-between;
     align-items: center;
     backdrop-filter: blur(14px);
     border-bottom: 1px solid var(--glass-border);
+    gap: 8px;
+}
+
+.hamburgerBtn {
+    display: none;
+    height: 38px;
+    width: 38px;
+    flex-shrink: 0;
+    margin-left: 1rem;
+    border-radius: 50%;
+    border: 1px solid var(--glass-border);
+    background: var(--glass);
+    backdrop-filter: blur(14px);
+    color: var(--text-mid);
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    transition: transform 0.25s ease, background 0.25s ease, color 0.25s ease;
+}
+
+.hamburgerBtn:hover {
+    color: var(--text-hi);
+    background: linear-gradient(135deg, rgba(124, 92, 255, 0.18), rgba(55, 226, 255, 0.12));
+}
+
+.hamburgerBtn:active {
+    transform: scale(0.94);
 }
 
 .navbar span {
@@ -32,6 +61,11 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-shrink: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .navbar span i {
@@ -49,6 +83,7 @@
     gap: 12px;
     margin-right: 1.5rem;
     padding: 1rem 0;
+    flex-shrink: 0;
 }
 
 .themeToggle {
@@ -101,6 +136,10 @@
     cursor: pointer;
     box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.15);
     transition: transform 0.25s ease, box-shadow 0.25s ease;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: var(--font-display);
 }
 
 .userIcon:hover {
@@ -128,7 +167,7 @@
     background: var(--glass);
     backdrop-filter: blur(16px);
     border-radius: 18px;
-    padding: 6px 56px 6px 6px;
+    padding: 6px 96px 6px 6px;
     box-shadow: var(--shadow-soft),
                 inset 0 1px 0 rgba(255, 255, 255, 0.05);
     transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease;
@@ -250,6 +289,42 @@ input:focus {
     outline: none;
 }
 
+#micBtn {
+    cursor: pointer;
+    height: 40px;
+    width: 40px;
+    font-size: 15px;
+    position: absolute;
+    right: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--text-mid);
+    transition: transform 0.2s ease, background 0.25s ease, color 0.25s ease, box-shadow 0.25s ease;
+}
+
+#micBtn:hover {
+    color: var(--text-hi);
+    background: linear-gradient(135deg, rgba(124, 92, 255, 0.2), rgba(55, 226, 255, 0.14));
+    box-shadow: 0 8px 20px -8px rgba(124, 92, 255, 0.6);
+}
+
+#micBtn.listening {
+    color: #fff;
+    background: linear-gradient(135deg, #ff5c5c, #ff8a5c);
+    box-shadow: 0 0 0 0 rgba(255, 92, 92, 0.6);
+    animation: micPulse 1.4s infinite;
+}
+
+@keyframes micPulse {
+    0% { box-shadow: 0 0 0 0 rgba(255, 92, 92, 0.55); }
+    70% { box-shadow: 0 0 0 10px rgba(255, 92, 92, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 92, 92, 0); }
+}
+
 #submit {
     cursor: pointer;
     height: 40px;
@@ -289,15 +364,16 @@ input:focus {
 }
 
 .dropDown {
-    position: absolute;
+    position: fixed;
     top: 4rem;
-    right: 2.5rem;
+    right: 1rem;
     background: var(--bg-panel);
     backdrop-filter: blur(18px);
     padding: 0.5rem;
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-md);
     width: 170px;
+    max-width: calc(100vw - 1.5rem);
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -327,12 +403,216 @@ input:focus {
 }
 
 .exportDiv {
-    position: relative;
+    position: static;
 }
 
 .exportDropDown {
-    position: absolute;
-    top: 3rem;
-    right: 0;
+    position: fixed;
+    top: 4rem;
+    right: 1rem;
     width: 200px;
+    max-width: calc(100vw - 1.5rem);
+}
+
+.personaToggle {
+    width: auto;
+    border-radius: 999px;
+    padding: 0 0.9rem 0 0.7rem;
+    gap: 0.45rem;
+    max-width: 160px;
+}
+
+.personaLabel {
+    font-size: 0.8rem;
+    font-weight: 500;
+    white-space: nowrap;
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.personaDropDown {
+    position: fixed;
+    top: 4rem;
+    right: 1rem;
+    width: 260px;
+    max-width: calc(100vw - 1.5rem);
+    max-height: min(360px, 70vh);
+    overflow-y: auto;
+}
+
+.personaDropDown .dropDownItem {
+    align-items: flex-start;
+    gap: 0.7rem;
+    padding: 0.55rem 0.6rem;
+}
+
+.personaDropDown .dropDownItem i {
+    margin-top: 3px;
+    flex-shrink: 0;
+    width: 16px;
+    text-align: center;
+}
+
+.personaItemText {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    text-align: left;
+}
+
+.personaItemName {
+    font-size: 0.82rem;
+    color: var(--text-hi);
+    font-weight: 500;
+    line-height: 1.3;
+}
+
+.personaItemDesc {
+    font-size: 0.7rem;
+    color: var(--text-low);
+    line-height: 1.3;
+}
+
+.activePersona {
+    background: linear-gradient(135deg, rgba(124, 92, 255, 0.22), rgba(55, 226, 255, 0.14));
+}
+
+.activePersona .personaItemName {
+    color: var(--accent-1);
+}
+
+.userDropDown {
+    width: 220px;
+}
+
+.userDropDownHeader {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 0.5rem 0.7rem 0.7rem;
+    margin-bottom: 0.3rem;
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.userDropDownName {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-hi);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.userDropDownEmail {
+    font-size: 0.74rem;
+    color: var(--text-low);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ===== Tablet / laptop-narrow ===== */
+@media (max-width: 900px) {
+    .hamburgerBtn {
+        display: flex;
+    }
+
+    .navbar span {
+        margin-left: 0.5rem;
+    }
+
+    .dropDown,
+    .exportDropDown,
+    .personaDropDown {
+        top: 3.75rem;
+    }
+}
+
+/* ===== Mobile responsiveness ===== */
+@media (max-width: 640px) {
+    .navbar span {
+        margin: 0.75rem 0.5rem 0.75rem 0.5rem;
+        font-size: 0.95rem;
+    }
+
+    .navRight {
+        gap: 6px;
+        margin-right: 0.6rem;
+        padding: 0.7rem 0;
+    }
+
+    .hamburgerBtn {
+        height: 34px;
+        width: 34px;
+        margin-left: 0.6rem;
+        font-size: 13px;
+    }
+
+    .themeToggle {
+        height: 34px;
+        width: 34px;
+        font-size: 13px;
+    }
+
+    /* icon-only pill on small screens so the navbar doesn't overflow */
+    .personaToggle {
+        max-width: 34px;
+        padding: 0;
+        justify-content: center;
+    }
+
+    .personaLabel {
+        display: none;
+    }
+
+    .dropDown,
+    .exportDropDown,
+    .personaDropDown {
+        top: 3.5rem;
+        right: 0.75rem;
+        max-width: calc(100vw - 1.5rem);
+    }
+
+    .dropDown {
+        width: 200px;
+    }
+
+    .personaDropDown {
+        width: 280px;
+    }
+
+    .exportDropDown {
+        width: 190px;
+    }
+
+    .chatInput {
+        padding: 0 0.75rem 0.75rem;
+    }
+
+    .inputBox {
+        padding: 6px 88px 6px 6px;
+    }
+
+    #micBtn {
+        right: 48px;
+        height: 36px;
+        width: 36px;
+    }
+
+    #submit {
+        height: 36px;
+        width: 36px;
+        right: 6px;
+    }
+}
+
+@media (max-width: 380px) {
+    .personaDropDown,
+    .dropDown,
+    .exportDropDown {
+        width: calc(100vw - 1.5rem);
+        right: 0.75rem;
+    }
 }

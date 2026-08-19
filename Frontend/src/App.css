@@ -56,3 +56,51 @@ body {
     position: relative;
     z-index: 1;
 }
+
+.authLoadingScreen {
+    align-items: center;
+    justify-content: center;
+}
+
+.sidebarOverlay {
+    display: none;
+}
+
+@media (max-width: 900px) {
+    .app {
+        position: relative;
+    }
+
+    /* Sidebar becomes an off-canvas drawer that slides in from the left */
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        z-index: 2000;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+        width: min(300px, 80vw);
+        min-width: 0;
+        box-shadow: none;
+    }
+
+    .sidebar.sidebarOpen {
+        transform: translateX(0);
+        box-shadow: 20px 0 60px -20px rgba(0, 0, 0, 0.5);
+    }
+
+    .sidebarOverlay {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.45);
+        backdrop-filter: blur(2px);
+        z-index: 1500;
+        animation: fadeIn 0.2s ease both;
+    }
+
+    .chatWindow {
+        width: 100%;
+    }
+}

@@ -11,7 +11,7 @@ const MessageSchema=new mongoose.Schema({
         required:true
     },
     image:{
-        type:String, // stores a data URL (e.g. "data:image/png;base64,...") for display in chat history
+        type:String, 
         default:null
     },
     timestamp:{
@@ -26,9 +26,18 @@ const ThreadSchema=new mongoose.Schema({
         required:true,
         unique:true
     },
+    userId:{
+        type:mongoose.Schema.Types.ObjectId,
+        ref:"User",
+        required:true
+    },
     title:{
         type:String,
         default:"New Chat"
+    },
+    persona:{
+        type:String,
+        default:"nexus"
     },
     messages:[MessageSchema],
     createdAt:{

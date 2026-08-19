@@ -4,12 +4,14 @@ import { MyContext } from "./MyContext.jsx";
 import {v1 as uuidv1} from "uuid";
 
 function Sidebar(){
-    const {allThreads,setAllThreads,currThreadId,setNewChats,setPrompt,setReply,setCurrThreadId,setPreChats} = useContext(MyContext);
+    const {allThreads,setAllThreads,currThreadId,setNewChats,setPrompt,setReply,setCurrThreadId,setPreChats,isSidebarOpen,setIsSidebarOpen,token} = useContext(MyContext);
     const [searchTerm, setSearchTerm] = useState("");
 
     const getAllThreads=async()=>{
         try {
-            const response=await fetch("http://localhost:8080/api/thread");
+            const response=await fetch("http://localhost:8080/api/thread",{
+                headers:{ Authorization:`Bearer ${token}` }
+            });
             const res=await response.json();
             const filteredData=res.map(thread => ({threadId: thread.threadId, title: thread.title}));
             console.log(filteredData);
@@ -19,7 +21,7 @@ function Sidebar(){
         }
     };
     useEffect(()=>{
-        getAllThreads();
+        if(token) getAllThreads();
     },[currThreadId]);
 
     const createNewChat=async()=>{
@@ -28,12 +30,16 @@ function Sidebar(){
         setReply(null);
         setCurrThreadId(uuidv1());
         setPreChats([]);
+        setIsSidebarOpen(false); // auto-close on mobile after picking an action
     }
 
     const changeThreadId=async(newThreadId)=>{
         setCurrThreadId(newThreadId);
+        setIsSidebarOpen(false); // auto-close on mobile after picking a thread
         try{
-            const response=await fetch(`http://localhost:8080/api/thread/${newThreadId}`);
+            const response=await fetch(`http://localhost:8080/api/thread/${newThreadId}`,{
+                headers:{ Authorization:`Bearer ${token}` }
+            });
             const res=await response.json();
             setPreChats(res);
             setNewChats(false);
@@ -46,7 +52,8 @@ function Sidebar(){
     const deleteThread=async(threadId)=>{
         try{
             const response=await fetch(`http://localhost:8080/api/thread/${threadId}`,{
-                method: "DELETE"
+                method: "DELETE",
+                headers:{ Authorization:`Bearer ${token}` }
             });
             const res=await response.json();
             console.log(res);
@@ -82,7 +89,7 @@ function Sidebar(){
     };
 
     return (
-        <section className="sidebar">
+        <section className={"sidebar" + (isSidebarOpen ? " sidebarOpen" : "")}>
             <button onClick={createNewChat}>
                 <img className="logo"></img>
                 <span><i className="fa-solid fa-pen-to-square"></i></span>
