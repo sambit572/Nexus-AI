@@ -4,6 +4,7 @@ import cors from "cors";
 import mongoose from "mongoose";
 import chatRoutes from "./routes/chat.js";
 import authRoutes from "./routes/auth.js";
+import ragRoutes from "./routes/rag.js";
 import { generalLimiter } from "./middleware/rateLimiter.js";
 
 
@@ -19,6 +20,7 @@ app.use("/api",generalLimiter);
 
 app.use("/api/auth",authRoutes);
 app.use("/api",chatRoutes);
+app.use("/api",ragRoutes);
 
 app.listen(PORT,()=>{
   console.log("App is listening on port 8080");

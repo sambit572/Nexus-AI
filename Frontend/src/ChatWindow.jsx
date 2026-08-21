@@ -1,5 +1,6 @@
 import "./ChatWindow.css";
 import Chat from "./Chat.jsx";
+import RagPanel from "./RagPanel.jsx";
 import { MyContext } from "./MyContext.jsx";
 import { useContext,useState,useEffect,useRef} from "react";
 import {ScaleLoader} from "react-spinners";
@@ -9,12 +10,16 @@ const MAX_IMAGE_MB = 4;
 
 function ChatWindow(){
 
-    const {prompt,setPrompt,reply,setReply,currThreadId,preChats,setPreChats,newChats,setNewChats,theme,toggleTheme,persona,setPersona,isSidebarOpen,setIsSidebarOpen,token,user,logout}=useContext(MyContext);
+    const {prompt,setPrompt,reply,setReply,currThreadId,preChats,setPreChats,newChats,setNewChats,theme,toggleTheme,persona,setPersona,isSidebarOpen,setIsSidebarOpen,token,user,logout,responseStyle,setResponseStyle}=useContext(MyContext);
     const [loading,setLoading]=useState(false);
     const [isOpen,setIsOpen]=useState(false);
     const [exportOpen,setExportOpen]=useState(false);
     const [personaOpen,setPersonaOpen]=useState(false);
+    const [ragOpen,setRagOpen]=useState(false);
     const [personas,setPersonas]=useState([]);
+    const [responseStyles,setResponseStyles]=useState([]); // [{id,label,description}]
+    const [pendingChoices,setPendingChoices]=useState(null); // [{style,label,text}] awaiting a pick, or null
+    const [choosing,setChoosing]=useState(false);
     const [image,setImage]=useState(null);           // File object staged for the next send
     const [imagePreview,setImagePreview]=useState(null); // data URL, shown in the composer
     const [sentImagePreview,setSentImagePreview]=useState(null); // carried into preChats once the reply lands
@@ -99,6 +104,13 @@ function ChatWindow(){
             .then(res=>res.json())
             .then(data=>setPersonas(data.personas || []))
             .catch(err=>console.log("Failed to load personas:",err));
+
+        fetch("http://localhost:8080/api/response-styles",{
+            headers:{ Authorization:`Bearer ${token}` }
+        })
+            .then(res=>res.json())
+            .then(data=>setResponseStyles(data.styles || []))
+            .catch(err=>console.log("Failed to load response styles:",err));
     },[]);
 
     const handleImageSelect=(e)=>{
@@ -142,6 +154,9 @@ function ChatWindow(){
 
         setLoading(true);
         setNewChats(false);
+        // A fresh question always discards any unanswered comparison from
+        // the previous turn - that one is simply left without a reply.
+        setPendingChoices(null);
 
         const formData=new FormData();
         formData.append("message", messageToSend || "");
@@ -159,12 +174,25 @@ function ChatWindow(){
             console.log(data);
             if(!response.ok){
                 console.log(data.error || "Something went wrong");
+            } else if(data.multiChoice){
+                // No style locked in yet: show both candidate answers and
+                // wait for the user to pick one. The user's message is
+                // appended immediately; no assistant reply exists yet.
+                setPreChats(prev => [...prev, {
+                    role:"user",
+                    content: messageToSend,
+                    image: imageToSend ? imagePreview : null
+                }]);
+                setPendingChoices(data.choices);
+                setPrompt("");
+                setSentImagePreview(null);
             } else {
                 // Keep prompt/image in sync with what was actually sent so the
                 // reply-effect below appends the correct user/assistant pair.
                 setPrompt(messageToSend);
                 setSentImagePreview(imageToSend ? imagePreview : null);
                 setReply(data.reply);
+                if(data.style) setResponseStyle(data.style);
             }
         } catch(err) {
             console.log(err);
@@ -172,6 +200,53 @@ function ChatWindow(){
         setLoading(false);
         if(!isOverride){
             removeImage();
+        }
+    }
+
+    // Called when the user picks one of the two side-by-side answers.
+    // Saves it as the real assistant reply and locks the thread to that style.
+    const choosePendingResponse=async(style,text)=>{
+        if(choosing) return;
+        setChoosing(true);
+        try{
+            const response=await fetch("http://localhost:8080/api/chat/choose",{
+                method:"POST",
+                headers:{
+                    Authorization:`Bearer ${token}`,
+                    "Content-Type":"application/json"
+                },
+                body: JSON.stringify({ threadId: currThreadId, style, text })
+            });
+            const data=await response.json();
+            if(!response.ok){
+                console.log(data.error || "Failed to save your chosen response");
+            } else {
+                setPreChats(prev => [...prev, { role:"assistant", content:data.reply }]);
+                setResponseStyle(data.style);
+                setPendingChoices(null);
+            }
+        } catch(err){
+            console.log(err);
+        }
+        setChoosing(false);
+    }
+
+    // Lets the user go back to side-by-side comparison mode for this thread.
+    const resetResponseStyle=async()=>{
+        try{
+            const response=await fetch(`http://localhost:8080/api/thread/${currThreadId}/style`,{
+                method:"PATCH",
+                headers:{
+                    Authorization:`Bearer ${token}`,
+                    "Content-Type":"application/json"
+                },
+                body: JSON.stringify({ style:null })
+            });
+            if(response.ok){
+                setResponseStyle(null);
+            }
+        } catch(err){
+            console.log(err);
         }
     }
 
@@ -242,6 +317,20 @@ function ChatWindow(){
                             </div>
                         }
                     </div>
+                    {
+                        responseStyle &&
+                        <div className="styleChip" title="Currently answering in this style for this chat">
+                            <i className="fa-solid fa-code-compare"></i>
+                            <span className="styleChipLabel">
+                                {responseStyles.find(s=>s.id===responseStyle)?.label || responseStyle}
+                            </span>
+                            <i
+                                className="fa-solid fa-xmark styleChipReset"
+                                title="Compare styles again"
+                                onClick={resetResponseStyle}
+                            ></i>
+                        </div>
+                    }
                     <div className="exportDiv">
                         <button
                             className="themeToggle"
@@ -273,6 +362,19 @@ function ChatWindow(){
                             </div>
                         }
                     </div>
+                    <button
+                        className="themeToggle"
+                        onClick={()=>{
+                            setRagOpen(true);
+                            setIsOpen(false);
+                            setExportOpen(false);
+                            setPersonaOpen(false);
+                        }}
+                        aria-label="Chat with your documents"
+                        title="Chat with your documents (RAG)"
+                    >
+                        <i className="fa-solid fa-file-lines"></i>
+                    </button>
                     <button
                         className="themeToggle"
                         onClick={toggleTheme}
@@ -313,7 +415,14 @@ function ChatWindow(){
                     </div>
                 </div>
             }
-            <Chat getReply={getReply}></Chat>
+            <Chat
+                getReply={getReply}
+                pendingChoices={pendingChoices}
+                onChoosePending={choosePendingResponse}
+                choosing={choosing}
+            ></Chat>
+
+            { ragOpen && <RagPanel onClose={()=>setRagOpen(false)} /> }
 
             <ScaleLoader color={theme === "dark" ? "#f2f2f7" : "#191a23"} loading={loading}>
 

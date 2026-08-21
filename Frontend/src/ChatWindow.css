@@ -121,6 +121,43 @@
     transform: translateY(0) scale(0.94);
 }
 
+.styleChip {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    height: 38px;
+    padding: 0 12px;
+    border-radius: 999px;
+    border: 1px solid var(--glass-border);
+    background: var(--glass);
+    backdrop-filter: blur(14px);
+    color: var(--text-mid);
+    font-size: 12.5px;
+    white-space: nowrap;
+}
+
+.styleChip i:first-child {
+    color: var(--accent-1);
+    font-size: 12px;
+}
+
+.styleChipLabel {
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.styleChipReset {
+    cursor: pointer;
+    color: var(--text-low);
+    padding: 2px;
+    transition: color 0.2s ease;
+}
+
+.styleChipReset:hover {
+    color: var(--accent-3);
+}
+
 .userIconDiv {
     margin: 0;
 }

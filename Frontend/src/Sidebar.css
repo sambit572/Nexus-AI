@@ -124,28 +124,200 @@
     overflow-y: auto;
 }
 
-.history li {
+.folderGroup {
+    margin-bottom: 6px;
+}
+
+.folderHeader {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    color: var(--text-mid);
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.folderHeader:hover {
+    background: rgba(124, 92, 255, 0.08);
+    color: var(--text-hi);
+}
+
+.folderHeader i:first-child {
+    font-size: 10px;
+    width: 10px;
+    color: var(--text-low);
+}
+
+.folderIcon {
+    color: var(--accent-1);
+    font-size: 12px;
+}
+
+.folderName {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.folderCount {
+    font-size: 11px;
+    color: var(--text-low);
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    padding: 1px 7px;
+    border-radius: 999px;
+    font-weight: 500;
+    text-transform: none;
+}
+
+.folderThreads {
+    margin: 2px 0 4px 4px;
+    padding-left: 10px;
+    border-left: 1px solid var(--glass-border);
+}
+
+.folderThreads li {
     list-style-type: none;
     cursor: pointer;
-    padding: 10px 14px;
-    margin-bottom: 6px;
+    padding: 9px 12px;
+    margin-bottom: 4px;
     font-size: 13.5px;
     letter-spacing: 0.2px;
     border: 1px solid transparent;
     border-radius: var(--radius-sm);
     position: relative;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
     transition: background 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
     animation: fadeUp 0.4s ease both;
 }
 
-.history li:hover {
+.threadTitle {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+.folderThreads li:hover {
     background: rgba(124, 92, 255, 0.1);
     border-color: rgba(124, 92, 255, 0.25);
     transform: translateX(4px);
     color: var(--text-hi);
+}
+
+.threadActions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.folderThreads li:hover .threadActions {
+    opacity: 1;
+}
+
+.threadActions i {
+    color: var(--text-mid);
+    transition: color 0.2s ease;
+}
+
+.threadActions .fa-folder-tree:hover {
+    color: var(--accent-1);
+}
+
+.threadActions .fa-trash:hover {
+    color: var(--accent-3);
+}
+
+.moveMenu {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 8px;
+    z-index: 20;
+    min-width: 160px;
+    background: var(--bg-panel);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-soft);
+    padding: 6px;
+    animation: fadeUp 0.15s ease;
+}
+
+.moveMenuItem {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    font-size: 12.5px;
+    color: var(--text-mid);
+    border-radius: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.moveMenuItem:hover {
+    background: rgba(124, 92, 255, 0.12);
+    color: var(--text-hi);
+}
+
+.moveMenuItem i {
+    color: var(--accent-1);
+    font-size: 11px;
+    flex-shrink: 0;
+}
+
+.moveMenuNewItem {
+    border-top: 1px solid var(--glass-border);
+    margin-top: 4px;
+    padding-top: 8px;
+}
+
+.newFolderRow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px;
+}
+
+.newFolderRow input {
+    flex: 1;
+    min-width: 0;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-size: 12.5px;
+    color: var(--text-hi);
+}
+
+.newFolderRow input:focus {
+    outline: none;
+    border-color: var(--accent-1);
+}
+
+.newFolderRow i {
+    color: var(--accent-1);
+    cursor: pointer;
+    padding: 4px;
+}
+
+.newFolderRow i:hover {
+    color: var(--accent-2);
 }
 
 .sign {
@@ -156,24 +328,6 @@
     color: var(--text-low);
     border-top: 1px solid var(--glass-border);
     letter-spacing: 0.5px;
-}
-
-.fa-trash {
-    opacity: 0;
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    transition: opacity 0.2s ease, color 0.2s ease;
-}
-
-.history li:hover .fa-trash {
-    opacity: 1;
-    color: var(--text-mid);
-}
-
-.fa-trash:hover {
-    color: var(--accent-3) !important;
 }
 
 .highlighted {

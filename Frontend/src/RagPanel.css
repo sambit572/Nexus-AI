@@ -1,0 +1,378 @@
+.ragOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 6, 10, 0.6);
+    backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    animation: fadeIn 0.2s ease;
+    padding: 20px;
+}
+
+.ragPanel {
+    width: 100%;
+    max-width: 980px;
+    height: 85vh;
+    max-height: 720px;
+    background: var(--bg-panel);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-soft);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: fadeUp 0.25s ease;
+}
+
+.ragHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.ragHeader h2 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    color: var(--text-hi);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ragHeader h2 i {
+    color: var(--accent-1);
+}
+
+.ragCloseBtn {
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    color: var(--text-mid);
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.ragCloseBtn:hover {
+    color: var(--text-hi);
+    border-color: var(--accent-1);
+}
+
+.ragBody {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+}
+
+.ragSidebarCol {
+    width: 300px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--glass-border);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-y: auto;
+}
+
+.ragUploadBtn {
+    background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.ragUploadBtn:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+.ragUploadBtn:disabled {
+    opacity: 0.7;
+    cursor: default;
+}
+
+.ragError {
+    color: var(--accent-3);
+    font-size: 0.82rem;
+    margin: 0;
+}
+
+.ragMuted {
+    color: var(--text-low);
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+.ragDocList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ragDocItem {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.ragDocItem:hover {
+    background: var(--glass);
+}
+
+.ragDocItemActive {
+    background: var(--glass);
+    border-color: var(--accent-1);
+}
+
+.ragDocIcon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--bg-panel-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent-1);
+    flex-shrink: 0;
+}
+
+.ragDocInfo {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.ragDocName {
+    color: var(--text-hi);
+    font-size: 0.85rem;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ragDocMeta {
+    color: var(--text-low);
+    font-size: 0.72rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.ragFailed {
+    color: var(--accent-3);
+}
+
+.ragDeleteBtn {
+    background: none;
+    border: none;
+    color: var(--text-low);
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    flex-shrink: 0;
+    transition: color 0.15s ease;
+}
+
+.ragDeleteBtn:hover {
+    color: var(--accent-3);
+}
+
+.ragChatCol {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.ragEmptyState {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    color: var(--text-low);
+    text-align: center;
+    padding: 30px;
+}
+
+.ragEmptyState i {
+    font-size: 2rem;
+    color: var(--accent-1);
+    opacity: 0.7;
+}
+
+.ragEmptyState p {
+    max-width: 320px;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.ragQaList {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.ragQaItem {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ragQuestion {
+    align-self: flex-end;
+    background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+    color: #fff;
+    padding: 10px 14px;
+    border-radius: 14px 14px 2px 14px;
+    max-width: 75%;
+    font-size: 0.88rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.ragAnswer {
+    align-self: flex-start;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    color: var(--text-hi);
+    padding: 12px 14px;
+    border-radius: 14px 14px 14px 2px;
+    max-width: 85%;
+    font-size: 0.88rem;
+    line-height: 1.55;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.ragAnswer i {
+    color: var(--accent-1);
+    margin-top: 3px;
+    flex-shrink: 0;
+}
+
+.ragAnswer p {
+    margin: 0;
+    white-space: pre-wrap;
+}
+
+.ragSources {
+    margin-top: 10px;
+    font-size: 0.76rem;
+    color: var(--text-low);
+}
+
+.ragSources summary {
+    cursor: pointer;
+    color: var(--accent-1);
+    font-weight: 500;
+}
+
+.ragSourceItem {
+    margin-top: 6px;
+    padding: 8px 10px;
+    background: var(--bg-panel-2);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.ragSourceScore {
+    font-weight: 600;
+    color: var(--accent-2);
+}
+
+.ragInputBox {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 18px;
+    border-top: 1px solid var(--glass-border);
+}
+
+.ragInputBox input {
+    flex: 1;
+    background: var(--bg-panel-2);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    color: var(--text-hi);
+    font-size: 0.9rem;
+    outline: none;
+}
+
+.ragInputBox input:focus {
+    border-color: var(--accent-1);
+}
+
+.ragInputBox button {
+    background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+    color: #fff;
+    border: none;
+    width: 42px;
+    height: 42px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: opacity 0.15s ease;
+}
+
+.ragInputBox button:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+@media (max-width: 720px) {
+    .ragPanel {
+        height: 92vh;
+        max-height: none;
+    }
+    .ragBody {
+        flex-direction: column;
+    }
+    .ragSidebarCol {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--glass-border);
+        max-height: 220px;
+    }
+    .ragQuestion, .ragAnswer {
+        max-width: 92%;
+    }
+}

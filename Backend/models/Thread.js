@@ -39,6 +39,18 @@ const ThreadSchema=new mongoose.Schema({
         type:String,
         default:"nexus"
     },
+    folder:{
+        type:String,
+        default:"General",
+        trim:true
+    },
+    // null = still comparing both response styles side-by-side.
+    // "A"/"B" = the user picked a style; future replies use it directly.
+    responseStyle:{
+        type:String,
+        enum:["A","B",null],
+        default:null
+    },
     messages:[MessageSchema],
     createdAt:{
         type:Date,

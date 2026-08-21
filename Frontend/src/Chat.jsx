@@ -5,7 +5,7 @@ import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import "highlight.js/styles/github-dark.css";
 
-function Chat({getReply}){
+function Chat({getReply,pendingChoices,onChoosePending,choosing}){
     const {preChats,setPreChats,newChats,reply} = useContext(MyContext);
     const [latestReply, setLatestReply] = useState(null);
     const [editingIdx, setEditingIdx] = useState(null);
@@ -62,7 +62,7 @@ function Chat({getReply}){
             {newChats && <h1>Begin a New Journey</h1>}
             <div className="chats">
                 {
-                    preChats?.slice(0, -1).map((chat,idx)=>
+                    (pendingChoices ? preChats : preChats?.slice(0, -1))?.map((chat,idx)=>
                         <div className={chat.role==="user"?"userDiv":"nexusDiv"} key={idx}>
                             {
                                 chat.role === "user" ? (
@@ -114,7 +114,7 @@ function Chat({getReply}){
                 }
 
                 {
-                    preChats?.length >0 && (
+                    !pendingChoices && preChats?.length >0 && (
                         <>
                             {
                                 latestReply === null ? (
@@ -135,6 +135,36 @@ function Chat({getReply}){
                             }
                         </>
                     )
+                }
+
+                {
+                    pendingChoices &&
+                    <div className="pendingChoiceWrap">
+                        <div className="pendingChoiceGrid">
+                            {
+                                pendingChoices.map(choice=>(
+                                    <div className="pendingChoiceCard" key={choice.style}>
+                                        <div className="pendingChoiceHeader">
+                                            <span className="pendingChoiceLabel">{choice.label}</span>
+                                        </div>
+                                        <div className="pendingChoiceBody">
+                                            <ReactMarkdown rehypePlugins={[rehypeHighlight]}>{choice.text}</ReactMarkdown>
+                                        </div>
+                                        <button
+                                            className="pendingChoosePick"
+                                            disabled={choosing}
+                                            onClick={()=>onChoosePending(choice.style, choice.text)}
+                                        >
+                                            <i className="fa-solid fa-check"></i> Use this style
+                                        </button>
+                                    </div>
+                                ))
+                            }
+                        </div>
+                        <p className="pendingChoiceHint">
+                            Pick a response style and future answers in this chat will follow it. Skip it, and you'll keep seeing two options.
+                        </p>
+                    </div>
                 }
                 
             </div>

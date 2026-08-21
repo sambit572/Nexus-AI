@@ -249,3 +249,92 @@ pre {
         margin-left: 1.8rem;
     }
 }
+
+.pendingChoiceWrap {
+    margin: 0.4rem 0 1.6rem;
+    animation: fadeUp 0.35s ease both;
+}
+
+.pendingChoiceGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.pendingChoiceCard {
+    display: flex;
+    flex-direction: column;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    backdrop-filter: blur(14px);
+    overflow: hidden;
+    transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.pendingChoiceCard:hover {
+    border-color: rgba(124, 92, 255, 0.4);
+    transform: translateY(-2px);
+}
+
+.pendingChoiceHeader {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--glass-border);
+    background: linear-gradient(135deg, rgba(124, 92, 255, 0.14), rgba(55, 226, 255, 0.08));
+}
+
+.pendingChoiceLabel {
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    color: var(--text-hi);
+}
+
+.pendingChoiceBody {
+    padding: 14px;
+    font-size: 0.86rem;
+    line-height: 1.55;
+    color: var(--text-mid);
+    max-height: 340px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.pendingChoosePick {
+    margin: 0 12px 12px;
+    padding: 9px 12px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+    color: #fff;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.pendingChoosePick:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+.pendingChoosePick:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.pendingChoiceHint {
+    margin-top: 10px;
+    font-size: 0.78rem;
+    color: var(--text-low);
+    text-align: center;
+}
+
+@media (max-width: 720px) {
+    .pendingChoiceGrid {
+        grid-template-columns: 1fr;
+    }
+}

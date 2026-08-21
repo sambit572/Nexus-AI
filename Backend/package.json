@@ -9,6 +9,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongo": "^0.1.0",
     "mongoose": "^9.7.4",
-    "multer": "^2.2.0"
+    "multer": "^2.2.0",
+    "pdf-parse": "^2.4.5"
   }
 }

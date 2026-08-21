@@ -14,6 +14,9 @@ function App() {
   const [preChats,setPreChats]=useState([]);
   const [newChats,setNewChats]=useState([]);
   const [allThreads,setAllThreads]=useState([]);
+  // null = current thread is still comparing both response styles;
+  // "A"/"B" = it's locked to one style. Reset whenever the thread changes.
+  const [responseStyle,setResponseStyle]=useState(null);
   const [persona,setPersona]=useState(()=>{
     if(typeof window !== "undefined"){
       return window.localStorage.getItem("nexus-persona") || "nexus";
@@ -104,6 +107,7 @@ function App() {
     setReply(null);
     setPreChats([]);
     setAllThreads([]);
+    setResponseStyle(null);
     setCurrThreadId(uuidv1());
   };
 
@@ -114,6 +118,7 @@ function App() {
     preChats,setPreChats,
     newChats,setNewChats,
     allThreads,setAllThreads,
+    responseStyle,setResponseStyle,
     theme,toggleTheme,
     persona,setPersona,
     isSidebarOpen,setIsSidebarOpen,
