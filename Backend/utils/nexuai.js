@@ -1,5 +1,53 @@
 import "dotenv/config";
 
+// ---------------------------------------------------------------------------
+// Retry / fallback configuration
+// ---------------------------------------------------------------------------
+
+// Ordered list of models to try. If the first model keeps failing (rate
+// limit, server error, etc.) after using up its retries, we move on to the
+// next model in this list before finally giving up. Put your primary/best
+// model first and cheaper or older models as fallbacks.
+const MODEL_CHAIN = [
+  "gemini-3.5-flash",
+  "gemini-2.0-flash",
+  "gemini-1.5-flash"
+];
+
+const MAX_RETRIES_PER_MODEL = 3; // attempts per model before falling back
+const BASE_DELAY_MS = 1000;      // 1s, 2s, 4s ... before jitter
+const MAX_DELAY_MS = 15000;      // cap so we never wait absurdly long
+
+// HTTP status codes worth retrying. 429 = rate limited, 5xx = transient
+// server-side failure. 4xx other than 429 (bad request, bad key, etc.)
+// are NOT retried because retrying won't fix them.
+const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Computes an exponential backoff delay with random jitter.
+ * attempt is 0-indexed (0 = first retry wait, 1 = second, ...).
+ */
+function getBackoffDelay(attempt) {
+  const exponential = Math.min(BASE_DELAY_MS * 2 ** attempt, MAX_DELAY_MS);
+  // Full jitter: random value between 0 and the exponential delay. This
+  // avoids many parallel requests all retrying at the exact same instant
+  // (the "thundering herd" problem).
+  return Math.random() * exponential;
+}
+
+/**
+ * If the API returned a Retry-After header (Gemini sometimes does on 429s),
+ * prefer that over our own computed backoff since the server knows best.
+ */
+function getRetryAfterMs(response) {
+  const header = response?.headers?.get?.("retry-after");
+  if (!header) return null;
+  const seconds = Number(header);
+  return Number.isFinite(seconds) ? seconds * 1000 : null;
+}
+
 /**
  * Converts stored { role, content } messages into Gemini's multi-turn
  * `contents` shape. Gemini only recognizes "user" and "model" roles, so
@@ -86,33 +134,106 @@ const getNexusAiApiResponse = async (message, image = null, systemPrompt = null,
     body: JSON.stringify(body)
   };
 
-  try {
-    const response = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent",
-      options
-    );
+  // Collect one failure summary per model so that if everything fails,
+  // the final error message tells you exactly what happened at each step
+  // instead of just the last, possibly-unhelpful error.
+  const failureLog = [];
 
-    const data = await response.json();
+  // Outer loop: walk the model fallback chain (primary -> fallback -> fallback...)
+  for (let modelIndex = 0; modelIndex < MODEL_CHAIN.length; modelIndex++) {
+    const model = MODEL_CHAIN[modelIndex];
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
-    // 2. Capture API Errors and bubble them up to the router block
-    if (data.error) {
-      throw new Error(`Gemini Gateway Error: ${data.error.message} (Status: ${data.error.code})`);
+    // Inner loop: retry the SAME model with exponential backoff before
+    // giving up on it and moving to the next model in the chain.
+    for (let attempt = 0; attempt < MAX_RETRIES_PER_MODEL; attempt++) {
+      try {
+        const response = await fetch(url, options);
+        const data = await response.json();
+
+        // --- Case A: HTTP-level failure (response.ok === false) ---
+        if (!response.ok) {
+          const status = response.status;
+          const message = data?.error?.message || response.statusText;
+
+          if (RETRYABLE_STATUS.has(status) && attempt < MAX_RETRIES_PER_MODEL - 1) {
+            const delay = getRetryAfterMs(response) ?? getBackoffDelay(attempt);
+            console.warn(
+              `[Gemini] ${model} attempt ${attempt + 1}/${MAX_RETRIES_PER_MODEL} failed ` +
+              `(status ${status}: ${message}). Retrying in ${Math.round(delay)}ms...`
+            );
+            await sleep(delay);
+            continue; // retry same model
+          }
+
+          // Not retryable, or we've used up retries for this model ->
+          // record it and fall through to try the next model (if any).
+          failureLog.push(`${model}: HTTP ${status} - ${message}`);
+          break; // exit retry loop, move to next model in outer loop
+        }
+
+        // --- Case B: HTTP 200 but Gemini embedded an error in the body ---
+        if (data.error) {
+          const status = data.error.code;
+          if (RETRYABLE_STATUS.has(status) && attempt < MAX_RETRIES_PER_MODEL - 1) {
+            const delay = getBackoffDelay(attempt);
+            console.warn(
+              `[Gemini] ${model} attempt ${attempt + 1}/${MAX_RETRIES_PER_MODEL} returned ` +
+              `error (status ${status}: ${data.error.message}). Retrying in ${Math.round(delay)}ms...`
+            );
+            await sleep(delay);
+            continue;
+          }
+          failureLog.push(`${model}: ${data.error.message} (Status: ${status})`);
+          break;
+        }
+
+        // --- Case C: success - extract and return the text ---
+        const aiText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        if (!aiText) {
+          // Empty/malformed body is treated like a transient hiccup and
+          // is retried the same way as a rate limit would be.
+          if (attempt < MAX_RETRIES_PER_MODEL - 1) {
+            const delay = getBackoffDelay(attempt);
+            console.warn(
+              `[Gemini] ${model} attempt ${attempt + 1}/${MAX_RETRIES_PER_MODEL} returned an ` +
+              `empty response. Retrying in ${Math.round(delay)}ms...`
+            );
+            await sleep(delay);
+            continue;
+          }
+          failureLog.push(`${model}: empty response body after ${MAX_RETRIES_PER_MODEL} attempts`);
+          break;
+        }
+
+        if (modelIndex > 0) {
+          console.warn(`[Gemini] Recovered using fallback model "${model}" after primary model failure.`);
+        }
+        return aiText;
+
+      } catch (networkErr) {
+        // --- Case D: fetch itself threw (network down, DNS failure, etc.) ---
+        if (attempt < MAX_RETRIES_PER_MODEL - 1) {
+          const delay = getBackoffDelay(attempt);
+          console.warn(
+            `[Gemini] ${model} attempt ${attempt + 1}/${MAX_RETRIES_PER_MODEL} network error ` +
+            `(${networkErr.message}). Retrying in ${Math.round(delay)}ms...`
+          );
+          await sleep(delay);
+          continue;
+        }
+        failureLog.push(`${model}: network error - ${networkErr.message}`);
+        break;
+      }
     }
-
-    // 3. Extract text string safely
-    const aiText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-
-    if (!aiText) {
-      throw new Error("Failed parsing an empty block response from Gemini.");
-    }
-
-    // 4. Return the raw string content instead of forcing an Express res call
-    return aiText;
-
-  } catch (err) {
-    console.error("Error in getNexusAiApiResponse helper function:", err.message);
-    throw err; // Re-throw the error so your main server script can handle it gracefully
+    // Retries for this model are exhausted -> outer loop moves to the next model.
   }
+
+  // Every model in the chain failed after all their retries.
+  const summary = failureLog.join(" | ");
+  console.error("Error in getNexusAiApiResponse helper function: all models exhausted ->", summary);
+  throw new Error(`Gemini API unavailable after retries across all models. Details: ${summary}`);
 };
 
 export default getNexusAiApiResponse;

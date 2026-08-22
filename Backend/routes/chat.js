@@ -213,7 +213,12 @@
     try{
         const thread=await Thread.findOneAndUpdate(
             {threadId,userId:req.user.id},
-            {shareId:null, sharedAt:null},
+            // Use $unset instead of setting shareId:null. The sparse unique
+            // index only excludes documents where the field is entirely
+            // ABSENT - an explicit null still counts as a value and would
+            // collide with any other unshared thread the next time someone
+            // revokes a share link. $unset actually removes the field.
+            {$unset:{shareId:"", sharedAt:""}},
             {new:true}
         );
         if(!thread){

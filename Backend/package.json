@@ -1,4 +1,10 @@
 {
+  "type": "module",
+  "scripts": {
+    "start": "node Server.js",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand",
+    "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch --runInBand"
+  },
   "dependencies": {
     "@google/genai": "^2.11.0",
     "bcryptjs": "^2.4.3",
@@ -11,5 +17,10 @@
     "mongoose": "^9.7.4",
     "multer": "^2.2.0",
     "pdf-parse": "^2.4.5"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^7.0.0",
+    "mongodb-memory-server": "^10.1.2"
   }
 }
