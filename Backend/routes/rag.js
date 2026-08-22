@@ -7,6 +7,7 @@ import { extractText, inferFileType } from "../utils/fileParser.js";
 import { chunkText } from "../utils/textChunker.js";
 import { embedText, embedBatch, topKSimilarChunks } from "../utils/embeddings.js";
 import getNexusAiApiResponse from "../utils/nexuai.js";
+import { checkForJailbreakAttempt, hardenSystemPrompt, JAILBREAK_REFUSAL_MESSAGE } from "../utils/guardrails.js";
 
 const router = express.Router();
 
@@ -145,6 +146,14 @@ router.post("/rag/ask", chatLimiter, async (req, res) => {
         return res.status(400).json({ error: "documentId and question are required." });
     }
 
+    // Same basic guardrail as the main chat endpoint: don't even call the
+    // model for an obvious "ignore your instructions" style question.
+    const { flagged: isJailbreakAttempt } = checkForJailbreakAttempt(question);
+    if (isJailbreakAttempt) {
+        console.warn(`Jailbreak-style prompt detected on /rag/ask (user ${req.user.id})`);
+        return res.json({ answer: JAILBREAK_REFUSAL_MESSAGE, sources: [] });
+    }
+
     try {
         const doc = await Document.findOne({ _id: documentId, userId: req.user.id });
         if (!doc) {
@@ -163,10 +172,11 @@ router.post("/rag/ask", chatLimiter, async (req, res) => {
             .map((c, i) => `[Excerpt ${i + 1}]\n${c.text}`)
             .join("\n\n");
 
-        const systemPrompt =
+        const systemPrompt = hardenSystemPrompt(
             "You are a helpful assistant answering questions using ONLY the provided document excerpts. " +
             "If the answer isn't contained in the excerpts, say you don't have enough information from the document " +
-            "instead of guessing. Be concise and cite which excerpt(s) you used when helpful.";
+            "instead of guessing. Be concise and cite which excerpt(s) you used when helpful."
+        );
 
         const prompt =
             `Document excerpts:\n\n${context}\n\n` +

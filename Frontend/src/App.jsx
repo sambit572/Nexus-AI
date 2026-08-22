@@ -2,10 +2,17 @@ import './App.css';
 import Sidebar from "./Sidebar.jsx";
 import ChatWindow from "./ChatWindow.jsx";
 import Auth from "./Auth.jsx";
+import SharedThread from "./SharedThread.jsx";
 import { MyContext } from "./MyContext.jsx";
 import { useState, useEffect } from 'react';
 import {v1 as uuidv1} from "uuid";
 import {ScaleLoader} from "react-spinners";
+
+// Public "Share" links (e.g. /share/abc123) render a read-only view with
+// no login required, so this is checked before any auth-gated rendering.
+const SHARE_PATH_MATCH = typeof window !== "undefined"
+    ? window.location.pathname.match(/^\/share\/([a-zA-Z0-9_-]+)\/?$/)
+    : null;
 
 function App() {
   const [prompt,setPrompt]=useState("");
@@ -17,6 +24,15 @@ function App() {
   // null = current thread is still comparing both response styles;
   // "A"/"B" = it's locked to one style. Reset whenever the thread changes.
   const [responseStyle,setResponseStyle]=useState(null);
+  // { summary, summarizedCount, totalMessages } | null - context-window
+  // info for the current thread, shown as a small "compressed" badge.
+  const [contextInfo,setContextInfo]=useState(null);
+  // The custom "personality/instruction" typed for the NEXT new chat, sent
+  // once with that thread's first message and cleared right after.
+  const [pendingInstruction,setPendingInstruction]=useState("");
+  // The current thread's saved custom instruction (once it has one),
+  // editable anytime via the "Chat instructions" panel.
+  const [threadInstruction,setThreadInstruction]=useState("");
   const [persona,setPersona]=useState(()=>{
     if(typeof window !== "undefined"){
       return window.localStorage.getItem("nexus-persona") || "nexus";
@@ -108,6 +124,9 @@ function App() {
     setPreChats([]);
     setAllThreads([]);
     setResponseStyle(null);
+    setContextInfo(null);
+    setPendingInstruction("");
+    setThreadInstruction("");
     setCurrThreadId(uuidv1());
   };
 
@@ -119,11 +138,18 @@ function App() {
     newChats,setNewChats,
     allThreads,setAllThreads,
     responseStyle,setResponseStyle,
+    contextInfo,setContextInfo,
+    pendingInstruction,setPendingInstruction,
+    threadInstruction,setThreadInstruction,
     theme,toggleTheme,
     persona,setPersona,
     isSidebarOpen,setIsSidebarOpen,
     token,user,logout
   };
+
+  if(SHARE_PATH_MATCH){
+    return <SharedThread shareId={SHARE_PATH_MATCH[1]} />;
+  }
 
   if(!authChecked){
     return (

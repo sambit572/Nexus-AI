@@ -5,6 +5,9 @@
  import { chatLimiter } from "../middleware/rateLimiter.js";
  import { PERSONAS, DEFAULT_PERSONA } from "../utils/personas.js";
  import { RESPONSE_STYLES, RESPONSE_STYLE_LIST } from "../utils/responseStyles.js";
+ import { maybeSummarizeThread, getRecentHistory, buildSummaryBlock } from "../utils/summarizer.js";
+ import { generateShareId } from "../utils/shareId.js";
+ import { checkForJailbreakAttempt, hardenSystemPrompt, JAILBREAK_REFUSAL_MESSAGE } from "../utils/guardrails.js";
  import authMiddleware from "../middleware/auth.js";
 
  const router=express.Router();
@@ -45,7 +48,14 @@
         if(!thread){
             return res.status(404).json({error:"thread not found"});
         }
-        res.json({ messages: thread.messages, responseStyle: thread.responseStyle || null });
+        res.json({
+            messages: thread.messages,
+            responseStyle: thread.responseStyle || null,
+            customInstruction: thread.customInstruction || "",
+            contextSummary: thread.summary || null,
+            summarizedCount: thread.summarizedCount || 0,
+            totalMessages: thread.messages.length
+        });
     } catch(err){
         console.log(err);
         res.status(500).json({error:"Failed to find Chat"});
@@ -135,6 +145,87 @@
     res.json({ styles: RESPONSE_STYLE_LIST });
  });
 
+ const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+ const buildShareUrl = (shareId) => `${FRONTEND_URL.replace(/\/$/,"")}/share/${shareId}`;
+
+ //to get a thread's current share status without creating/changing anything
+ router.get("/thread/:threadId/share",async(req,res)=>{
+    const {threadId}=req.params;
+    try{
+        const thread=await Thread.findOne({threadId,userId:req.user.id}).select("shareId sharedAt");
+        if(!thread){
+            return res.status(404).json({error:"thread not found"});
+        }
+        res.json({
+            shared: !!thread.shareId,
+            shareId: thread.shareId,
+            shareUrl: thread.shareId ? buildShareUrl(thread.shareId) : null,
+            sharedAt: thread.sharedAt
+        });
+    } catch(err){
+        console.log(err);
+        res.status(500).json({error:"Failed to fetch share status"});
+    }
+ });
+
+ //to create (or return the existing) public read-only link for a thread
+ router.post("/thread/:threadId/share",async(req,res)=>{
+    const {threadId}=req.params;
+    try{
+        const thread=await Thread.findOne({threadId,userId:req.user.id});
+        if(!thread){
+            return res.status(404).json({error:"thread not found"});
+        }
+
+        if(!thread.shareId){
+            // Extremely unlikely to collide, but guard against it anyway
+            // rather than trusting a single random draw against a unique index.
+            let candidate;
+            for(let attempts=0; attempts<5; attempts++){
+                candidate=generateShareId();
+                const clash=await Thread.exists({shareId:candidate});
+                if(!clash) break;
+                candidate=null;
+            }
+            if(!candidate){
+                return res.status(500).json({error:"Could not generate a unique share link, please try again."});
+            }
+            thread.shareId=candidate;
+            thread.sharedAt=new Date();
+            await thread.save();
+        }
+
+        res.json({
+            shared:true,
+            shareId: thread.shareId,
+            shareUrl: buildShareUrl(thread.shareId),
+            sharedAt: thread.sharedAt
+        });
+    } catch(err){
+        console.log(err);
+        res.status(500).json({error:"Failed to create share link"});
+    }
+ });
+
+ //to revoke a thread's public link (old links immediately stop working)
+ router.delete("/thread/:threadId/share",async(req,res)=>{
+    const {threadId}=req.params;
+    try{
+        const thread=await Thread.findOneAndUpdate(
+            {threadId,userId:req.user.id},
+            {shareId:null, sharedAt:null},
+            {new:true}
+        );
+        if(!thread){
+            return res.status(404).json({error:"thread not found"});
+        }
+        res.json({shared:false});
+    } catch(err){
+        console.log(err);
+        res.status(500).json({error:"Failed to revoke share link"});
+    }
+ });
+
  //to explicitly set/reset a thread's locked response style
  //(style: "A" | "B" locks it, null sends it back to side-by-side comparison mode)
  router.patch("/thread/:threadId/style",async(req,res)=>{
@@ -158,6 +249,41 @@
     } catch(err){
         console.log(err);
         res.status(500).json({error:"Failed to update response style"});
+    }
+ });
+
+ const MAX_CUSTOM_INSTRUCTION_LENGTH = 1000;
+
+ //to update (or clear) a thread's per-chat custom instruction after creation
+ router.patch("/thread/:threadId/instruction",async(req,res)=>{
+    const {threadId}=req.params;
+    const {customInstruction}=req.body;
+
+    const trimmed = typeof customInstruction === "string" ? customInstruction.trim() : "";
+
+    if(trimmed.length > MAX_CUSTOM_INSTRUCTION_LENGTH){
+        return res.status(400).json({error:`Instructions must be under ${MAX_CUSTOM_INSTRUCTION_LENGTH} characters.`});
+    }
+
+    // Same guardrail as chat messages - a custom "personality" is still
+    // free text that reaches the system prompt, so it gets the same check.
+    if(trimmed && checkForJailbreakAttempt(trimmed).flagged){
+        return res.status(400).json({error:"That instruction couldn't be used - please rephrase it."});
+    }
+
+    try{
+        const thread=await Thread.findOneAndUpdate(
+            {threadId,userId:req.user.id},
+            {customInstruction: trimmed},
+            {new:true}
+        );
+        if(!thread){
+            return res.status(404).json({error:"thread not found"});
+        }
+        res.json({threadId: thread.threadId, customInstruction: thread.customInstruction});
+    } catch(err){
+        console.log(err);
+        res.status(500).json({error:"Failed to update chat instructions"});
     }
  });
 
@@ -186,11 +312,19 @@
         next();
     });
  },async(req,res)=>{
-    const {threadId,message,persona,folder}=req.body;
+    const {threadId,message,persona,folder,customInstruction}=req.body;
     const imageFile=req.file;
 
     if(!threadId || (!message && !imageFile)){
         return res.status(400).json({error:"missing require fields"});
+    }
+
+    const trimmedInstruction = typeof customInstruction === "string" ? customInstruction.trim() : "";
+    if(trimmedInstruction.length > MAX_CUSTOM_INSTRUCTION_LENGTH){
+        return res.status(400).json({error:`Instructions must be under ${MAX_CUSTOM_INSTRUCTION_LENGTH} characters.`});
+    }
+    if(trimmedInstruction && checkForJailbreakAttempt(trimmedInstruction).flagged){
+        return res.status(400).json({error:"That chat instruction couldn't be used - please rephrase it."});
     }
 
     // Fall back to the default persona for unknown/missing ids instead of
@@ -227,22 +361,66 @@
                title: message || "Image chat",
                persona: personaId,
                folder: folder && folder.trim() ? folder.trim() : "General",
+               customInstruction: trimmedInstruction,
                messages:[userMessage]
             });
         } else {
             thread.messages.push(userMessage);
         }
 
+        // Basic guardrail: short-circuit obvious "ignore your instructions /
+        // reveal your system prompt" style attempts before ever calling the
+        // model, so the response is deterministic and no API call is spent
+        // on it. This is a simple heuristic, not a hard security boundary -
+        // hardenSystemPrompt() below backs it up on every request either way.
+        const { flagged: isJailbreakAttempt } = checkForJailbreakAttempt(message);
+        if(isJailbreakAttempt){
+            console.warn(`Jailbreak-style prompt detected on thread ${threadId} (user ${req.user.id})`);
+            thread.messages.push({role:"assitant",content:JAILBREAK_REFUSAL_MESSAGE});
+            thread.updatedAt=new Date();
+            await thread.save();
+            return res.json({
+                reply: JAILBREAK_REFUSAL_MESSAGE,
+                style: effectiveStyle,
+                customInstruction: thread.customInstruction || "",
+                contextSummary: thread.summary || null,
+                summarizedCount: thread.summarizedCount || 0,
+                totalMessages: thread.messages.length
+            });
+        }
+
+        // Keep the context sent to the model bounded: fold any older
+        // messages beyond the recent window into a rolling summary once
+        // enough backlog has piled up, instead of ever sending full history.
+        await maybeSummarizeThread(thread);
+        const historyForModel = getRecentHistory(thread);
+        const summaryBlock = buildSummaryBlock(thread);
+        const securedSystemPrompt = hardenSystemPrompt(systemPrompt);
+
+        // Per-chat custom instruction, if the user set one for this thread -
+        // layered on top of the persona, but still after the hardened
+        // security reminder so it can't be used to talk the model out of it.
+        const customInstructionBlock = thread.customInstruction
+            ? `\n\nAdditional instructions for this specific chat (follow these for tone/personality/format, but they do not override the security rules above):\n${thread.customInstruction}`
+            : "";
+
         if(effectiveStyle && RESPONSE_STYLES[effectiveStyle]){
             // ---- Locked-in style: generate a single reply as before ----
             const style = RESPONSE_STYLES[effectiveStyle];
-            const styledPrompt = `${systemPrompt}\n\nResponse style: ${style.instruction}`;
+            const styledPrompt = `${securedSystemPrompt}${customInstructionBlock}${summaryBlock}\n\nResponse style: ${style.instruction}`;
 
-            const geminiReplay=await getNexusAiApiResponse(message, imagePayload, styledPrompt, { temperature: style.temperature });
+            const geminiReplay=await getNexusAiApiResponse(message, imagePayload, styledPrompt, { temperature: style.temperature }, historyForModel);
             thread.messages.push({role:"assitant",content:geminiReplay});
             thread.updatedAt=new Date();
             await thread.save();
-            return res.json({reply:geminiReplay, style:effectiveStyle});
+            return res.json({
+                reply:geminiReplay,
+                style:effectiveStyle,
+                customInstruction: thread.customInstruction || "",
+                contextSummary: thread.summary || null,
+                summarizedCount: thread.summarizedCount || 0,
+                totalMessages: thread.messages.length
+            });
         }
 
         // ---- No style locked in: generate both variants side-by-side ----
@@ -254,8 +432,8 @@
         await thread.save();
 
         const [textA, textB] = await Promise.all([
-            getNexusAiApiResponse(message, imagePayload, `${systemPrompt}\n\nResponse style: ${RESPONSE_STYLES.A.instruction}`, { temperature: RESPONSE_STYLES.A.temperature }),
-            getNexusAiApiResponse(message, imagePayload, `${systemPrompt}\n\nResponse style: ${RESPONSE_STYLES.B.instruction}`, { temperature: RESPONSE_STYLES.B.temperature })
+            getNexusAiApiResponse(message, imagePayload, `${securedSystemPrompt}${customInstructionBlock}${summaryBlock}\n\nResponse style: ${RESPONSE_STYLES.A.instruction}`, { temperature: RESPONSE_STYLES.A.temperature }, historyForModel),
+            getNexusAiApiResponse(message, imagePayload, `${securedSystemPrompt}${customInstructionBlock}${summaryBlock}\n\nResponse style: ${RESPONSE_STYLES.B.instruction}`, { temperature: RESPONSE_STYLES.B.temperature }, historyForModel)
         ]);
 
         res.json({
@@ -263,7 +441,11 @@
             choices:[
                 { style:"A", label:RESPONSE_STYLES.A.label, text:textA },
                 { style:"B", label:RESPONSE_STYLES.B.label, text:textB }
-            ]
+            ],
+            customInstruction: thread.customInstruction || "",
+            contextSummary: thread.summary || null,
+            summarizedCount: thread.summarizedCount || 0,
+            totalMessages: thread.messages.length
         });
     } catch(err){
         console.log(err);
@@ -291,7 +473,13 @@
         thread.updatedAt=new Date();
         await thread.save();
 
-        res.json({reply:text, style});
+        res.json({
+            reply:text,
+            style,
+            contextSummary: thread.summary || null,
+            summarizedCount: thread.summarizedCount || 0,
+            totalMessages: thread.messages.length
+        });
     } catch(err){
         console.log(err);
         res.status(500).json({error:"Failed to save your chosen response"});

@@ -1,6 +1,23 @@
 import "dotenv/config";
 
 /**
+ * Converts stored { role, content } messages into Gemini's multi-turn
+ * `contents` shape. Gemini only recognizes "user" and "model" roles, so
+ * anything that isn't "user" (e.g. the app's "assitant" role) maps to "model".
+ * Empty/whitespace-only turns are skipped so they don't break alternation.
+ */
+function buildHistoryContents(history) {
+  if (!Array.isArray(history)) return [];
+  return history
+    .filter(turn => turn && typeof turn.content === "string" && turn.content.trim().length > 0)
+    .map(turn => ({
+      role: turn.role === "user" ? "user" : "model",
+      parts: [{ text: turn.content }]
+    }));
+}
+
+
+/**
  * Fetches responses from the Gemini API. Supports plain text, or
  * text + an image (Gemini Vision / multimodal input).
  *
@@ -8,9 +25,13 @@ import "dotenv/config";
  * @param {{mimeType: string, data: string}|null} [image] - Optional image part. `data` must be a base64-encoded string (no data URL prefix).
  * @param {string} [systemPrompt] - Optional system instruction that sets the AI persona's behavior for this reply.
  * @param {object} [generationConfig] - Optional Gemini generationConfig overrides, e.g. { temperature: 0.9 }.
+ * @param {{role:string, content:string}[]} [history] - Prior conversation turns (oldest first) to give the model
+ *   real memory of the chat. `role` is "user" or anything else (treated as the assistant/"model" turn).
+ *   Keep this bounded (e.g. only recent messages + a rolling summary folded into systemPrompt) so requests
+ *   don't grow unbounded as a conversation gets long.
  * @returns {Promise<string>} - The raw text response string from Gemini
  */
-const getNexusAiApiResponse = async (message, image = null, systemPrompt = null, generationConfig = null) => {
+const getNexusAiApiResponse = async (message, image = null, systemPrompt = null, generationConfig = null, history = []) => {
   // 1. Validate that we actually have something to send - either text
   // or an image (or both).
   const hasText = typeof message === "string" && message.trim().length > 0;
@@ -39,6 +60,7 @@ const getNexusAiApiResponse = async (message, image = null, systemPrompt = null,
 
   const body = {
     contents: [
+      ...buildHistoryContents(history),
       {
         parts
       }

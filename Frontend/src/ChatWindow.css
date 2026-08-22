@@ -158,6 +158,181 @@
     color: var(--accent-3);
 }
 
+.contextBadgeWrap {
+    position: relative;
+}
+
+.contextBadge {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    height: 38px;
+    padding: 0 12px;
+    border-radius: 999px;
+    border: 1px solid var(--glass-border);
+    background: var(--glass);
+    backdrop-filter: blur(14px);
+    color: var(--text-mid);
+    font-size: 12.5px;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.contextBadge:hover {
+    border-color: var(--accent-1);
+    color: var(--text-hi);
+}
+
+.contextBadge i {
+    color: var(--accent-2);
+    font-size: 12px;
+}
+
+.contextPopover {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 320px;
+    max-width: 80vw;
+    background: var(--bg-panel);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-soft);
+    padding: 14px;
+    z-index: 50;
+    animation: fadeUp 0.15s ease;
+}
+
+.contextPopoverHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-hi);
+    margin-bottom: 8px;
+}
+
+.contextPopoverHeader i {
+    cursor: pointer;
+    color: var(--text-low);
+    padding: 2px;
+}
+
+.contextPopoverHeader i:hover {
+    color: var(--accent-3);
+}
+
+.contextPopoverMeta {
+    font-size: 11.5px;
+    color: var(--text-low);
+    margin: 0 0 10px;
+    line-height: 1.4;
+}
+
+.contextPopoverSummary {
+    font-size: 12.5px;
+    color: var(--text-mid);
+    line-height: 1.55;
+    margin: 0;
+    max-height: 220px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+}
+
+.contextBadgeActive {
+    border-color: var(--accent-1);
+    color: var(--text-hi);
+}
+
+.contextBadgeActive i {
+    color: var(--accent-1);
+}
+
+.instructionPopover {
+    width: 300px;
+}
+
+.instructionTextarea {
+    width: 100%;
+    min-height: 90px;
+    resize: vertical;
+    background: var(--bg-panel-2);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    color: var(--text-hi);
+    font-size: 0.8rem;
+    font-family: var(--font-body);
+    line-height: 1.5;
+}
+
+.instructionTextarea:focus {
+    outline: none;
+    border-color: var(--accent-1);
+}
+
+.instructionError {
+    color: var(--accent-3);
+    font-size: 0.75rem;
+    margin: 8px 0 0;
+    line-height: 1.4;
+}
+
+.instructionActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.instructionClearBtn {
+    background: transparent;
+    border: 1px solid var(--glass-border);
+    color: var(--text-mid);
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 0.78rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.instructionClearBtn:hover:not(:disabled) {
+    color: var(--accent-3);
+    border-color: var(--accent-3);
+}
+
+.instructionClearBtn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.instructionSaveBtn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+    color: #fff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s ease, transform 0.15s ease;
+}
+
+.instructionSaveBtn:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+.instructionSaveBtn:disabled {
+    opacity: 0.7;
+    cursor: default;
+}
+
 .userIconDiv {
     margin: 0;
 }
@@ -449,6 +624,108 @@ input:focus {
     right: 1rem;
     width: 200px;
     max-width: calc(100vw - 1.5rem);
+}
+
+.sharePanel {
+    width: 280px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.sharePanelTitle {
+    margin: 0;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-hi);
+}
+
+.sharePanelHint {
+    margin: 0;
+    font-size: 0.78rem;
+    color: var(--text-low);
+    line-height: 1.45;
+}
+
+.shareLinkRow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.shareLinkRow input {
+    flex: 1;
+    min-width: 0;
+    background: var(--bg-panel-2);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+    font-size: 0.78rem;
+    color: var(--text-hi);
+}
+
+.shareLinkRow input:focus {
+    outline: none;
+    border-color: var(--accent-1);
+}
+
+.shareLinkRow button {
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    color: var(--text-mid);
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.shareLinkRow button:hover {
+    color: var(--text-hi);
+    border-color: var(--accent-1);
+}
+
+.shareCreateBtn, .shareRevokeBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 9px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: opacity 0.2s ease, transform 0.15s ease;
+}
+
+.shareCreateBtn {
+    background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+    color: #fff;
+}
+
+.shareCreateBtn:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+.shareCreateBtn:disabled {
+    opacity: 0.7;
+    cursor: default;
+}
+
+.shareRevokeBtn {
+    background: transparent;
+    border: 1px solid var(--glass-border);
+    color: var(--accent-3);
+}
+
+.shareRevokeBtn:hover:not(:disabled) {
+    border-color: var(--accent-3);
 }
 
 .personaToggle {

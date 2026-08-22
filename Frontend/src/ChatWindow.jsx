@@ -10,7 +10,7 @@ const MAX_IMAGE_MB = 4;
 
 function ChatWindow(){
 
-    const {prompt,setPrompt,reply,setReply,currThreadId,preChats,setPreChats,newChats,setNewChats,theme,toggleTheme,persona,setPersona,isSidebarOpen,setIsSidebarOpen,token,user,logout,responseStyle,setResponseStyle}=useContext(MyContext);
+    const {prompt,setPrompt,reply,setReply,currThreadId,preChats,setPreChats,newChats,setNewChats,theme,toggleTheme,persona,setPersona,isSidebarOpen,setIsSidebarOpen,token,user,logout,responseStyle,setResponseStyle,contextInfo,setContextInfo,pendingInstruction,setPendingInstruction,threadInstruction,setThreadInstruction}=useContext(MyContext);
     const [loading,setLoading]=useState(false);
     const [isOpen,setIsOpen]=useState(false);
     const [exportOpen,setExportOpen]=useState(false);
@@ -20,6 +20,16 @@ function ChatWindow(){
     const [responseStyles,setResponseStyles]=useState([]); // [{id,label,description}]
     const [pendingChoices,setPendingChoices]=useState(null); // [{style,label,text}] awaiting a pick, or null
     const [choosing,setChoosing]=useState(false);
+    const [contextInfoOpen,setContextInfoOpen]=useState(false);
+    const [shareOpen,setShareOpen]=useState(false);
+    const [shareStatus,setShareStatus]=useState(null); // {shared, shareId, shareUrl, sharedAt} | null
+    const [shareLoading,setShareLoading]=useState(false);
+    const [shareCopied,setShareCopied]=useState(false);
+    const [instructionOpen,setInstructionOpen]=useState(false);
+    const [instructionDraft,setInstructionDraft]=useState("");
+    const [instructionSaving,setInstructionSaving]=useState(false);
+    const [instructionError,setInstructionError]=useState("");
+    const [sendError,setSendError]=useState("");
     const [image,setImage]=useState(null);           // File object staged for the next send
     const [imagePreview,setImagePreview]=useState(null); // data URL, shown in the composer
     const [sentImagePreview,setSentImagePreview]=useState(null); // carried into preChats once the reply lands
@@ -142,6 +152,17 @@ function ChatWindow(){
         if(fileInputRef.current) fileInputRef.current.value="";
     };
 
+    // Pulls the (optional) context-window summarization info off a /chat
+    // response and syncs it into context, so the "compressed" badge stays
+    // live without needing to reopen the thread.
+    const syncContextInfo=(data)=>{
+        setContextInfo(data.contextSummary ? {
+            summary: data.contextSummary,
+            summarizedCount: data.summarizedCount || 0,
+            totalMessages: data.totalMessages || 0
+        } : null);
+    };
+
     // overrideMessage: pass an edited prompt to regenerate a response for it
     // instead of whatever is currently typed in the input box. Edits/regenerates
     // are text-only, so no image is attached in that path.
@@ -162,6 +183,7 @@ function ChatWindow(){
         formData.append("message", messageToSend || "");
         formData.append("threadId", currThreadId);
         formData.append("persona", persona || "nexus");
+        if(pendingInstruction) formData.append("customInstruction", pendingInstruction);
         if(imageToSend) formData.append("image", imageToSend);
 
         try {
@@ -174,6 +196,10 @@ function ChatWindow(){
             console.log(data);
             if(!response.ok){
                 console.log(data.error || "Something went wrong");
+                setSendError(data.error || "Something went wrong. Please try again.");
+                // A flagged custom instruction blocks the whole first message -
+                // drop it so a retry can go through with just the message.
+                if(pendingInstruction) setPendingInstruction("");
             } else if(data.multiChoice){
                 // No style locked in yet: show both candidate answers and
                 // wait for the user to pick one. The user's message is
@@ -186,6 +212,10 @@ function ChatWindow(){
                 setPendingChoices(data.choices);
                 setPrompt("");
                 setSentImagePreview(null);
+                syncContextInfo(data);
+                if(data.customInstruction!==undefined) setThreadInstruction(data.customInstruction);
+                setPendingInstruction("");
+                setSendError("");
             } else {
                 // Keep prompt/image in sync with what was actually sent so the
                 // reply-effect below appends the correct user/assistant pair.
@@ -193,6 +223,10 @@ function ChatWindow(){
                 setSentImagePreview(imageToSend ? imagePreview : null);
                 setReply(data.reply);
                 if(data.style) setResponseStyle(data.style);
+                syncContextInfo(data);
+                if(data.customInstruction!==undefined) setThreadInstruction(data.customInstruction);
+                setPendingInstruction("");
+                setSendError("");
             }
         } catch(err) {
             console.log(err);
@@ -224,6 +258,7 @@ function ChatWindow(){
                 setPreChats(prev => [...prev, { role:"assistant", content:data.reply }]);
                 setResponseStyle(data.style);
                 setPendingChoices(null);
+                syncContextInfo(data);
             }
         } catch(err){
             console.log(err);
@@ -248,6 +283,138 @@ function ChatWindow(){
         } catch(err){
             console.log(err);
         }
+    }
+
+    // Fetches the thread's current share status (without creating a link)
+    // whenever the Share panel is opened.
+    const openSharePanel=async()=>{
+        setShareOpen(true);
+        setIsOpen(false);
+        setExportOpen(false);
+        setPersonaOpen(false);
+        setInstructionOpen(false);
+        setShareCopied(false);
+        setShareLoading(true);
+        try{
+            const response=await fetch(`http://localhost:8080/api/thread/${currThreadId}/share`,{
+                headers:{ Authorization:`Bearer ${token}` }
+            });
+            const data=await response.json();
+            if(response.ok) setShareStatus(data);
+        } catch(err){
+            console.log(err);
+        }
+        setShareLoading(false);
+    }
+
+    // Creates (or fetches the existing) public read-only link.
+    const createShareLink=async()=>{
+        setShareLoading(true);
+        try{
+            const response=await fetch(`http://localhost:8080/api/thread/${currThreadId}/share`,{
+                method:"POST",
+                headers:{ Authorization:`Bearer ${token}` }
+            });
+            const data=await response.json();
+            if(response.ok){
+                setShareStatus(data);
+            } else {
+                console.log(data.error || "Failed to create share link");
+            }
+        } catch(err){
+            console.log(err);
+        }
+        setShareLoading(false);
+    }
+
+    // Revokes the public link - the URL stops working immediately.
+    const revokeShareLink=async()=>{
+        setShareLoading(true);
+        try{
+            const response=await fetch(`http://localhost:8080/api/thread/${currThreadId}/share`,{
+                method:"DELETE",
+                headers:{ Authorization:`Bearer ${token}` }
+            });
+            if(response.ok){
+                setShareStatus({ shared:false, shareId:null, shareUrl:null, sharedAt:null });
+                setShareCopied(false);
+            }
+        } catch(err){
+            console.log(err);
+        }
+        setShareLoading(false);
+    }
+
+    const copyShareLink=async()=>{
+        if(!shareStatus?.shareUrl) return;
+        try{
+            await navigator.clipboard.writeText(shareStatus.shareUrl);
+            setShareCopied(true);
+            setTimeout(()=>setShareCopied(false), 2000);
+        } catch(err){
+            console.log(err);
+        }
+    }
+
+    // Opens the "Chat instructions" panel pre-filled with whatever this
+    // thread currently has saved (empty if none was set at creation).
+    const openInstructionPanel=()=>{
+        setInstructionDraft(threadInstruction || "");
+        setInstructionError("");
+        setInstructionOpen(true);
+        setIsOpen(false);
+        setExportOpen(false);
+        setPersonaOpen(false);
+        setShareOpen(false);
+    }
+
+    const saveInstruction=async()=>{
+        setInstructionSaving(true);
+        setInstructionError("");
+        try{
+            const response=await fetch(`http://localhost:8080/api/thread/${currThreadId}/instruction`,{
+                method:"PATCH",
+                headers:{
+                    Authorization:`Bearer ${token}`,
+                    "Content-Type":"application/json"
+                },
+                body: JSON.stringify({ customInstruction: instructionDraft })
+            });
+            const data=await response.json();
+            if(!response.ok){
+                setInstructionError(data.error || "Failed to save instructions.");
+            } else {
+                setThreadInstruction(data.customInstruction || "");
+                setInstructionOpen(false);
+            }
+        } catch(err){
+            console.log(err);
+            setInstructionError("Failed to save instructions. Please try again.");
+        }
+        setInstructionSaving(false);
+    }
+
+    const clearInstruction=async()=>{
+        setInstructionDraft("");
+        setInstructionSaving(true);
+        setInstructionError("");
+        try{
+            const response=await fetch(`http://localhost:8080/api/thread/${currThreadId}/instruction`,{
+                method:"PATCH",
+                headers:{
+                    Authorization:`Bearer ${token}`,
+                    "Content-Type":"application/json"
+                },
+                body: JSON.stringify({ customInstruction: "" })
+            });
+            const data=await response.json();
+            if(response.ok){
+                setThreadInstruction("");
+            }
+        } catch(err){
+            console.log(err);
+        }
+        setInstructionSaving(false);
     }
 
     useEffect(()=>{
@@ -287,6 +454,8 @@ function ChatWindow(){
                                 setPersonaOpen(!personaOpen);
                                 setIsOpen(false);
                                 setExportOpen(false);
+                                setShareOpen(false);
+                                setInstructionOpen(false);
                             }}
                             aria-label="Choose AI persona"
                             title="Choose AI persona"
@@ -331,6 +500,137 @@ function ChatWindow(){
                             ></i>
                         </div>
                     }
+                    {
+                        contextInfo?.summary &&
+                        <div className="contextBadgeWrap">
+                            <button
+                                className="contextBadge"
+                                onClick={()=>setContextInfoOpen(!contextInfoOpen)}
+                                title="This chat got long - older messages were summarized to save space"
+                            >
+                                <i className="fa-solid fa-layer-group"></i>
+                                <span>Context compressed</span>
+                            </button>
+                            {
+                                contextInfoOpen &&
+                                <div className="contextPopover">
+                                    <div className="contextPopoverHeader">
+                                        <span>Older messages summarized</span>
+                                        <i className="fa-solid fa-xmark" onClick={()=>setContextInfoOpen(false)}></i>
+                                    </div>
+                                    <p className="contextPopoverMeta">
+                                        {contextInfo.summarizedCount} of {contextInfo.totalMessages} messages folded into a summary
+                                        to keep this chat within the model's context limit.
+                                    </p>
+                                    <p className="contextPopoverSummary">{contextInfo.summary}</p>
+                                </div>
+                            }
+                        </div>
+                    }
+                    <div className="contextBadgeWrap">
+                        <button
+                            className={"contextBadge" + (threadInstruction ? " contextBadgeActive" : "")}
+                            onClick={()=>{
+                                if(instructionOpen){ setInstructionOpen(false); return; }
+                                openInstructionPanel();
+                            }}
+                            title={threadInstruction ? "This chat has custom instructions" : "Set custom instructions for this chat"}
+                        >
+                            <i className="fa-solid fa-wand-magic-sparkles"></i>
+                            <span>{threadInstruction ? "Chat instructions" : "Add instructions"}</span>
+                        </button>
+                        {
+                            instructionOpen &&
+                            <div className="contextPopover instructionPopover">
+                                <div className="contextPopoverHeader">
+                                    <span>Instructions for this chat</span>
+                                    <i className="fa-solid fa-xmark" onClick={()=>setInstructionOpen(false)}></i>
+                                </div>
+                                <p className="contextPopoverMeta">
+                                    Applies only to this chat, on top of your selected persona.
+                                </p>
+                                <textarea
+                                    className="instructionTextarea"
+                                    value={instructionDraft}
+                                    onChange={(e)=>setInstructionDraft(e.target.value)}
+                                    placeholder="e.g. Act as a strict code reviewer and be blunt about issues"
+                                    maxLength={1000}
+                                />
+                                {
+                                    instructionError &&
+                                    <p className="instructionError">{instructionError}</p>
+                                }
+                                <div className="instructionActions">
+                                    <button
+                                        className="instructionClearBtn"
+                                        onClick={clearInstruction}
+                                        disabled={instructionSaving || !threadInstruction}
+                                    >
+                                        Clear
+                                    </button>
+                                    <button
+                                        className="instructionSaveBtn"
+                                        onClick={saveInstruction}
+                                        disabled={instructionSaving}
+                                    >
+                                        {instructionSaving ? <><i className="fa-solid fa-spinner fa-spin"></i> Saving...</> : "Save"}
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <div className="exportDiv">
+                        <button
+                            className="themeToggle"
+                            onClick={()=>{
+                                if(shareOpen){ setShareOpen(false); return; }
+                                openSharePanel();
+                            }}
+                            aria-label="Share conversation"
+                            title="Share conversation"
+                        >
+                            <i className="fa-solid fa-share-nodes"></i>
+                        </button>
+                        {
+                            shareOpen &&
+                            <div className="dropDown exportDropDown sharePanel">
+                                <p className="sharePanelTitle">Share this conversation</p>
+                                {
+                                    shareLoading && !shareStatus ? (
+                                        <p className="sharePanelHint"><i className="fa-solid fa-spinner fa-spin"></i> Loading...</p>
+                                    ) : shareStatus?.shared ? (
+                                        <>
+                                            <p className="sharePanelHint">
+                                                Anyone with this link can view this conversation, read-only, without signing in.
+                                            </p>
+                                            <div className="shareLinkRow">
+                                                <input type="text" readOnly value={shareStatus.shareUrl} onClick={(e)=>e.target.select()} />
+                                                <button onClick={copyShareLink} title="Copy link">
+                                                    <i className={shareCopied ? "fa-solid fa-check" : "fa-solid fa-copy"}></i>
+                                                </button>
+                                            </div>
+                                            <button className="shareRevokeBtn" onClick={revokeShareLink} disabled={shareLoading}>
+                                                <i className="fa-solid fa-link-slash"></i> Revoke link
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <p className="sharePanelHint">
+                                                Create a public read-only link so anyone can view this conversation without logging in.
+                                            </p>
+                                            <button className="shareCreateBtn" onClick={createShareLink} disabled={shareLoading}>
+                                                {
+                                                    shareLoading
+                                                        ? <><i className="fa-solid fa-spinner fa-spin"></i> Creating...</>
+                                                        : <><i className="fa-solid fa-link"></i> Create public link</>
+                                                }
+                                            </button>
+                                        </>
+                                    )
+                                }
+                            </div>
+                        }
+                    </div>
                     <div className="exportDiv">
                         <button
                             className="themeToggle"
@@ -338,6 +638,8 @@ function ChatWindow(){
                                 setExportOpen(!exportOpen);
                                 setIsOpen(false);
                                 setPersonaOpen(false);
+                                setShareOpen(false);
+                                setInstructionOpen(false);
                             }}
                             aria-label="Export conversation"
                             title="Export conversation"
@@ -369,6 +671,8 @@ function ChatWindow(){
                             setIsOpen(false);
                             setExportOpen(false);
                             setPersonaOpen(false);
+                            setShareOpen(false);
+                            setInstructionOpen(false);
                         }}
                         aria-label="Chat with your documents"
                         title="Chat with your documents (RAG)"
@@ -387,6 +691,8 @@ function ChatWindow(){
                         setIsOpen(!isOpen);
                         setExportOpen(false);
                         setPersonaOpen(false);
+                        setShareOpen(false);
+                        setInstructionOpen(false);
                     }}>
                         <span className="userIcon" title={user?.name || "Account"}>
                             {
@@ -448,6 +754,10 @@ function ChatWindow(){
                     imageError &&
                     <p className="imageError">{imageError}</p>
                 }
+                {
+                    sendError &&
+                    <p className="imageError">{sendError}</p>
+                }
                 <div className="inputBox">
                     <button
                         type="button"
@@ -466,7 +776,7 @@ function ChatWindow(){
                     />
                     <input placeholder="Ask your Query"
                     value={prompt}
-                    onChange={(e)=>setPrompt(e.target.value)}
+                    onChange={(e)=>{ setPrompt(e.target.value); if(sendError) setSendError(""); }}
                     onKeyDown={(e)=>e.key==="Enter"?getReply():""}
                         
                     >

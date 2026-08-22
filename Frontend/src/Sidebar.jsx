@@ -6,13 +6,15 @@ import {v1 as uuidv1} from "uuid";
 const DEFAULT_FOLDERS = ["General","Work","Study","Personal"];
 
 function Sidebar(){
-    const {allThreads,setAllThreads,currThreadId,setNewChats,setPrompt,setReply,setCurrThreadId,setPreChats,isSidebarOpen,setIsSidebarOpen,token,setResponseStyle} = useContext(MyContext);
+    const {allThreads,setAllThreads,currThreadId,setNewChats,setPrompt,setReply,setCurrThreadId,setPreChats,isSidebarOpen,setIsSidebarOpen,token,setResponseStyle,setContextInfo,setPendingInstruction,setThreadInstruction} = useContext(MyContext);
     const [searchTerm, setSearchTerm] = useState("");
     const [folders, setFolders] = useState([]); // [{name,count,isDefault}]
     const [collapsed, setCollapsed] = useState({}); // { folderName: bool }
     const [moveMenuFor, setMoveMenuFor] = useState(null); // threadId with open move-menu
     const [creatingFolderFor, setCreatingFolderFor] = useState(null); // threadId currently naming a new folder
     const [newFolderName, setNewFolderName] = useState("");
+    const [newChatModalOpen, setNewChatModalOpen] = useState(false);
+    const [newChatInstruction, setNewChatInstruction] = useState("");
     const menuRef = useRef(null);
 
     const getAllThreads=async()=>{
@@ -60,14 +62,26 @@ function Sidebar(){
         return ()=>document.removeEventListener("mousedown", handleClickOutside);
     },[]);
 
-    const createNewChat=async()=>{
+    // Opens a small modal so the user can optionally set a personality/
+    // instruction for the new chat before it starts (or just skip it).
+    const openNewChatModal=()=>{
+        setNewChatInstruction("");
+        setNewChatModalOpen(true);
+        setIsSidebarOpen(false); // auto-close sidebar on mobile
+    }
+
+    const startNewChat=(instructionText)=>{
         setNewChats(true);
         setPrompt("");
         setReply(null);
         setCurrThreadId(uuidv1());
         setPreChats([]);
         setResponseStyle(null);
-        setIsSidebarOpen(false); // auto-close on mobile after picking an action
+        setContextInfo(null);
+        setThreadInstruction("");
+        // Held until the first message of this new thread goes out, then cleared.
+        setPendingInstruction((instructionText || "").trim());
+        setNewChatModalOpen(false);
     }
 
     const changeThreadId=async(newThreadId)=>{
@@ -80,6 +94,12 @@ function Sidebar(){
             const res=await response.json();
             setPreChats(res.messages || []);
             setResponseStyle(res.responseStyle || null);
+            setThreadInstruction(res.customInstruction || "");
+            setContextInfo(res.contextSummary ? {
+                summary: res.contextSummary,
+                summarizedCount: res.summarizedCount || 0,
+                totalMessages: res.totalMessages || 0
+            } : null);
             setNewChats(false);
             setReply(null);
         } catch(err){
@@ -97,7 +117,7 @@ function Sidebar(){
             console.log(res);
             setAllThreads(prev=>prev.filter(thread=>thread.threadId!==threadId));
             if(currThreadId===threadId){
-                createNewChat();
+                startNewChat("");
             }
         } catch(err){
             console.log(err);
@@ -179,7 +199,7 @@ function Sidebar(){
 
     return (
         <section className={"sidebar" + (isSidebarOpen ? " sidebarOpen" : "")}>
-            <button onClick={createNewChat}>
+            <button onClick={openNewChatModal}>
                 <img className="logo"></img>
                 <span><i className="fa-solid fa-pen-to-square"></i></span>
             </button>
@@ -291,6 +311,35 @@ function Sidebar(){
             <div className="sign">
                 <p>By NEXUS TEAM</p>
             </div>
+
+            {
+                newChatModalOpen &&
+                <div className="newChatOverlay" onClick={()=>setNewChatModalOpen(false)}>
+                    <div className="newChatModal" onClick={(e)=>e.stopPropagation()}>
+                        <h3><i className="fa-solid fa-wand-magic-sparkles"></i> Give this chat a personality</h3>
+                        <p className="newChatModalHint">
+                            Optional. Add instructions just for this chat - tone, format, role, anything -
+                            on top of your selected persona. You can edit or clear this anytime.
+                        </p>
+                        <textarea
+                            autoFocus
+                            placeholder={`e.g. "Act as a strict code reviewer, be blunt and point out every issue" or "Explain things simply, like for a 12 year old"`}
+                            value={newChatInstruction}
+                            onChange={(e)=>setNewChatInstruction(e.target.value)}
+                            maxLength={1000}
+                        />
+                        <div className="newChatModalCount">{newChatInstruction.length}/1000</div>
+                        <div className="newChatModalActions">
+                            <button className="newChatSkipBtn" onClick={()=>startNewChat("")}>
+                                Skip
+                            </button>
+                            <button className="newChatStartBtn" onClick={()=>startNewChat(newChatInstruction)}>
+                                <i className="fa-solid fa-arrow-right"></i> Start chat
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
         </section>
     )
 }
