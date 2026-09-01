@@ -61,6 +61,26 @@ function RagPanel({ onClose }) {
         return () => clearInterval(pollRef.current);
     }, []);
 
+    // While a document is selected here, send a "time spent on this paper"
+    // heartbeat every 30s - this is what feeds the "Time Spent by Paper"
+    // donut chart on the Activity dashboard. Only runs while a document is
+    // actually selected and this panel is open/visible.
+    useEffect(() => {
+        if (!selectedDocId) return;
+
+        const HEARTBEAT_SECONDS = 30;
+        const interval = setInterval(() => {
+            if (document.visibilityState !== "visible") return;
+            fetch(`${API_BASE}/activity/heartbeat`, {
+                method: "POST",
+                headers: { ...authHeaders, "Content-Type": "application/json" },
+                body: JSON.stringify({ seconds: HEARTBEAT_SECONDS, documentId: selectedDocId })
+            }).catch(err => console.log("Paper heartbeat failed:", err));
+        }, HEARTBEAT_SECONDS * 1000);
+
+        return () => clearInterval(interval);
+    }, [selectedDocId, token]);
+
     const handleFileSelect = async (e) => {
         const file = e.target.files[0];
         if (!file) return;

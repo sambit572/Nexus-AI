@@ -1,6 +1,7 @@
 import express from "express";
 import multer from "multer";
 import Document from "../models/Document.js";
+import ActivityLog from "../models/ActivityLog.js";
 import authMiddleware from "../middleware/auth.js";
 import { chatLimiter } from "../middleware/rateLimiter.js";
 import { extractText, inferFileType } from "../utils/fileParser.js";
@@ -78,6 +79,14 @@ router.post("/rag/documents", chatLimiter, (req, res, next) => {
         }));
         doc.status = "ready";
         await doc.save();
+
+        // Log the upload so it shows up in the user's research activity
+        // (paper list, "papers researched" count, timeline, etc.)
+        await ActivityLog.create({
+            userId: req.user.id,
+            documentId: doc._id,
+            action: "document_upload"
+        });
 
         res.status(201).json({
             id: doc._id,
@@ -184,6 +193,15 @@ router.post("/rag/ask", chatLimiter, async (req, res) => {
             `Answer using only the excerpts above.`;
 
         const answer = await getNexusAiApiResponse(prompt, null, systemPrompt);
+
+        // Log the question so it counts toward this paper's activity
+        // (query count, last-accessed date, and the word-frequency cloud).
+        await ActivityLog.create({
+            userId: req.user.id,
+            documentId: doc._id,
+            action: "document_query",
+            questionText: question.trim()
+        });
 
         res.json({
             answer,

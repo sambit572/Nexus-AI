@@ -3,6 +3,7 @@ import cors from "cors";
 import chatRoutes from "./routes/chat.js";
 import authRoutes from "./routes/auth.js";
 import ragRoutes from "./routes/rag.js";
+import activityRoutes from "./routes/activityRoutes.js";
 import { generalLimiter } from "./middleware/rateLimiter.js";
 
 // This file builds and exports the Express app WITHOUT starting a server
@@ -27,5 +28,6 @@ app.use("/api", generalLimiter);
 app.use("/api/auth", authRoutes);
 app.use("/api", chatRoutes);
 app.use("/api", ragRoutes);
+app.use("/api", activityRoutes);
 
 export default app;
