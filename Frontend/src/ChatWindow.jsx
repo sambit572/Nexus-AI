@@ -1,6 +1,7 @@
 import "./ChatWindow.css";
 import Chat from "./Chat.jsx";
 import RagPanel from "./RagPanel.jsx";
+import ActivityDashboard from "./ActivityDashboard.jsx";
 import { MyContext } from "./MyContext.jsx";
 import { useContext,useState,useEffect,useRef} from "react";
 import {ScaleLoader} from "react-spinners";
@@ -16,6 +17,7 @@ function ChatWindow(){
     const [exportOpen,setExportOpen]=useState(false);
     const [personaOpen,setPersonaOpen]=useState(false);
     const [ragOpen,setRagOpen]=useState(false);
+    const [activityOpen,setActivityOpen]=useState(false);
     const [personas,setPersonas]=useState([]);
     const [responseStyles,setResponseStyles]=useState([]); // [{id,label,description}]
     const [pendingChoices,setPendingChoices]=useState(null); // [{style,label,text}] awaiting a pick, or null
@@ -106,6 +108,26 @@ function ChatWindow(){
             setIsListening(true);
         }
     };
+
+    // Sends a "still active" ping every 30s while the tab is visible, so
+    // total time spent can be tracked for the Activity dashboard. Pauses
+    // automatically when the tab is hidden/minimized.
+    useEffect(()=>{
+        const HEARTBEAT_SECONDS = 30;
+        const interval = setInterval(() => {
+            if (document.visibilityState !== "visible") return;
+            fetch("http://localhost:8080/api/activity/heartbeat", {
+                method: "POST",
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ seconds: HEARTBEAT_SECONDS })
+            }).catch(err => console.log("Heartbeat failed:", err));
+        }, HEARTBEAT_SECONDS * 1000);
+
+        return () => clearInterval(interval);
+    }, [token]);
 
     useEffect(()=>{
         fetch("http://localhost:8080/api/personas",{
@@ -681,6 +703,21 @@ function ChatWindow(){
                     </button>
                     <button
                         className="themeToggle"
+                        onClick={()=>{
+                            setActivityOpen(true);
+                            setIsOpen(false);
+                            setExportOpen(false);
+                            setPersonaOpen(false);
+                            setShareOpen(false);
+                            setInstructionOpen(false);
+                        }}
+                        aria-label="My research activity"
+                        title="My Research Activity"
+                    >
+                        <i className="fa-solid fa-chart-simple"></i>
+                    </button>
+                    <button
+                        className="themeToggle"
                         onClick={toggleTheme}
                         aria-label="Toggle light and dark mode"
                         title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
@@ -714,6 +751,9 @@ function ChatWindow(){
                             <span className="userDropDownEmail">{user.email}</span>
                         </div>
                     }
+                    <div className="dropDownItem" onClick={()=>{ setIsOpen(false); setActivityOpen(true); }}>
+                        <i className="fa-solid fa-chart-simple"></i>My Activity
+                    </div>
                     <div className="dropDownItem"><i className="fa-solid fa-cloud-arrow-up"></i>Upgrade</div>
                     <div className="dropDownItem"><i className="fa-solid fa-gear"></i>Settings</div>
                     <div className="dropDownItem" onClick={()=>{ setIsOpen(false); logout(); }}>
@@ -729,6 +769,7 @@ function ChatWindow(){
             ></Chat>
 
             { ragOpen && <RagPanel onClose={()=>setRagOpen(false)} /> }
+            { activityOpen && <ActivityDashboard onClose={()=>setActivityOpen(false)} /> }
 
             <ScaleLoader color={theme === "dark" ? "#f2f2f7" : "#191a23"} loading={loading}>
 

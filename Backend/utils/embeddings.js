@@ -1,13 +1,13 @@
 import "dotenv/config";
 
-const EMBED_MODEL = "models/embedding-001"; // free-tier Gemini embedding model
+const EMBED_MODEL = "models/gemini-embedding-001"; // embedding-001 was retired; this is the current stable Gemini embedding model
 const EMBED_URL = `https://generativelanguage.googleapis.com/v1beta/${EMBED_MODEL}:embedContent`;
 const BATCH_EMBED_URL = `https://generativelanguage.googleapis.com/v1beta/${EMBED_MODEL}:batchEmbedContents`;
 
 // --- Retry configuration (mirrors utils/nexuai.js) --------------------------
-// Embeddings only have one model (embedding-001), so there's no fallback
-// chain here like there is for chat - just retry-with-backoff on the same
-// endpoint, since free-tier rate limits are the main failure mode.
+// Embeddings only have one model (gemini-embedding-001), so there's no
+// fallback chain here like there is for chat - just retry-with-backoff on
+// the same endpoint, since free-tier rate limits are the main failure mode.
 const MAX_RETRIES = 3;
 const BASE_DELAY_MS = 1000;
 const MAX_DELAY_MS = 15000;
@@ -88,7 +88,7 @@ async function fetchWithRetry(url, payload, label) {
 }
 
 /**
- * Embeds a single string of text with Gemini's embedding-001 model.
+ * Embeds a single string of text with Gemini's gemini-embedding-001 model.
  * @param {string} text
  * @param {"RETRIEVAL_DOCUMENT"|"RETRIEVAL_QUERY"} taskType
  * @returns {Promise<number[]>}
@@ -172,9 +172,17 @@ export function cosineSimilarity(a, b) {
  * @param {number} topK
  */
 export function topKSimilarChunks(queryEmbedding, chunks, topK = 4) {
+    // NOTE: chunks come from a Mongoose document's array of subdocuments,
+    // not plain objects. Spreading a subdocument with {...chunk} does not
+    // reliably copy its fields (a known Mongoose gotcha) - "text" would
+    // silently come through as undefined even though direct property
+    // access (chunk.text) works fine. Building the object explicitly here
+    // avoids that trap.
     return chunks
         .map(chunk => ({
-            ...chunk,
+            text: chunk.text,
+            chunkIndex: chunk.chunkIndex,
+            embedding: chunk.embedding,
             score: cosineSimilarity(queryEmbedding, chunk.embedding)
         }))
         .sort((a, b) => b.score - a.score)
