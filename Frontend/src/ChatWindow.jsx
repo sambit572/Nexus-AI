@@ -2,6 +2,7 @@ import "./ChatWindow.css";
 import Chat from "./Chat.jsx";
 import RagPanel from "./RagPanel.jsx";
 import ActivityDashboard from "./ActivityDashboard.jsx";
+import ChatAnalytics from "./ChatAnalytics.jsx";
 import { MyContext } from "./MyContext.jsx";
 import { useContext,useState,useEffect,useRef} from "react";
 import {ScaleLoader} from "react-spinners";
@@ -18,6 +19,7 @@ function ChatWindow(){
     const [personaOpen,setPersonaOpen]=useState(false);
     const [ragOpen,setRagOpen]=useState(false);
     const [activityOpen,setActivityOpen]=useState(false);
+    const [analyticsOpen,setAnalyticsOpen]=useState(false);
     const [personas,setPersonas]=useState([]);
     const [responseStyles,setResponseStyles]=useState([]); // [{id,label,description}]
     const [pendingChoices,setPendingChoices]=useState(null); // [{style,label,text}] awaiting a pick, or null
@@ -718,6 +720,21 @@ function ChatWindow(){
                     </button>
                     <button
                         className="themeToggle"
+                        onClick={()=>{
+                            setAnalyticsOpen(true);
+                            setIsOpen(false);
+                            setExportOpen(false);
+                            setPersonaOpen(false);
+                            setShareOpen(false);
+                            setInstructionOpen(false);
+                        }}
+                        aria-label="Chat analytics"
+                        title="Chat Analytics"
+                    >
+                        <i className="fa-solid fa-comments"></i>
+                    </button>
+                    <button
+                        className="themeToggle"
                         onClick={toggleTheme}
                         aria-label="Toggle light and dark mode"
                         title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
@@ -770,6 +787,7 @@ function ChatWindow(){
 
             { ragOpen && <RagPanel onClose={()=>setRagOpen(false)} /> }
             { activityOpen && <ActivityDashboard onClose={()=>setActivityOpen(false)} /> }
+            { analyticsOpen && <ChatAnalytics onClose={()=>setAnalyticsOpen(false)} /> }
 
             <ScaleLoader color={theme === "dark" ? "#f2f2f7" : "#191a23"} loading={loading}>
 

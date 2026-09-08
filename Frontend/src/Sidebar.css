@@ -10,7 +10,7 @@
     flex-direction: column;
     justify-content: space-between;
     animation: fadeIn 0.6s ease;
-    transition: background 0.35s ease;
+    transition: background 0.35s ease, transform 0.3s ease;
 }
 
 .sidebar button {
@@ -448,4 +448,45 @@
 
 .newChatStartBtn:hover {
     transform: translateY(-1px);
+}
+
+/* ===== Mobile: sidebar becomes a slide-in drawer instead of a fixed
+   300px column. Matches the 900px breakpoint where ChatWindow.css already
+   shows the hamburger button, so both behaviors switch on together. ===== */
+@media (max-width: 900px) {
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        width: 280px;
+        min-width: 280px;
+        max-width: 82vw;
+        transform: translateX(-100%);
+        z-index: 999;
+        box-shadow: 20px 0 60px -20px rgba(0, 0, 0, 0.55);
+    }
+
+    .sidebar.sidebarOpen {
+        transform: translateX(0);
+    }
+}
+
+/* Dimmed backdrop shown behind the drawer, rendered by App.jsx as
+   .sidebarOverlay whenever isSidebarOpen is true. Defined here since it's
+   directly tied to this component's open/close behavior. */
+.sidebarOverlay {
+    display: none;
+}
+
+@media (max-width: 900px) {
+    .sidebarOverlay {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(5, 6, 10, 0.55);
+        backdrop-filter: blur(3px);
+        z-index: 998;
+        animation: fadeIn 0.2s ease;
+    }
 }
