@@ -1,0 +1,21 @@
+.activityWordCloud {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 10px 14px;
+    padding: 16px 8px;
+}
+
+.activityWordCloudItem {
+    color: var(--accent-1);
+    font-weight: 600;
+    font-family: var(--font-display);
+    line-height: 1;
+    cursor: default;
+    transition: opacity 0.15s ease;
+}
+
+.activityWordCloudItem:hover {
+    opacity: 1 !important;
+}

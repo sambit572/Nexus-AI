@@ -16,11 +16,12 @@
     "mongo": "^0.1.0",
     "mongoose": "^9.7.4",
     "multer": "^2.2.0",
-    "pdf-parse": "^2.4.5"
+    "pdf-parse": "^2.4.5",
+    "sentiment": "^5.0.2"
   },
   "devDependencies": {
     "jest": "^29.7.0",
-    "supertest": "^7.0.0",
-    "mongodb-memory-server": "^10.1.2"
+    "mongodb-memory-server": "^10.1.2",
+    "supertest": "^7.0.0"
   }
 }
