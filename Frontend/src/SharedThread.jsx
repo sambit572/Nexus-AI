@@ -1,4 +1,5 @@
 import "./SharedThread.css";
+import { API_BASE_URL } from "./config.js";
 import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
@@ -11,7 +12,7 @@ function SharedThread({ shareId }){
 
     useEffect(()=>{
         let cancelled=false;
-        fetch(`http://localhost:8080/api/shared/${shareId}`)
+        fetch(`${API_BASE_URL}/api/shared/${shareId}`)
             .then(res => res.json().then(data => ({ ok: res.ok, data })))
             .then(({ok, data})=>{
                 if(cancelled) return;

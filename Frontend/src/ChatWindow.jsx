@@ -1,4 +1,5 @@
 import "./ChatWindow.css";
+import { API_BASE_URL } from "./config.js";
 import Chat from "./Chat.jsx";
 import RagPanel from "./RagPanel.jsx";
 import ActivityDashboard from "./ActivityDashboard.jsx";
@@ -118,7 +119,7 @@ function ChatWindow(){
         const HEARTBEAT_SECONDS = 30;
         const interval = setInterval(() => {
             if (document.visibilityState !== "visible") return;
-            fetch("http://localhost:8080/api/activity/heartbeat", {
+            fetch(`${API_BASE_URL}/api/activity/heartbeat`, {
                 method: "POST",
                 headers: {
                     Authorization: `Bearer ${token}`,
@@ -132,14 +133,14 @@ function ChatWindow(){
     }, [token]);
 
     useEffect(()=>{
-        fetch("http://localhost:8080/api/personas",{
+        fetch(`${API_BASE_URL}/api/personas`,{
             headers:{ Authorization:`Bearer ${token}` }
         })
             .then(res=>res.json())
             .then(data=>setPersonas(data.personas || []))
             .catch(err=>console.log("Failed to load personas:",err));
 
-        fetch("http://localhost:8080/api/response-styles",{
+        fetch(`${API_BASE_URL}/api/response-styles`,{
             headers:{ Authorization:`Bearer ${token}` }
         })
             .then(res=>res.json())
@@ -211,7 +212,7 @@ function ChatWindow(){
         if(imageToSend) formData.append("image", imageToSend);
 
         try {
-            const response=await fetch("http://localhost:8080/api/chat",{
+            const response=await fetch(`${API_BASE_URL}/api/chat`,{
                 method:"POST",
                 headers:{ Authorization:`Bearer ${token}` },
                 body:formData
@@ -267,7 +268,7 @@ function ChatWindow(){
         if(choosing) return;
         setChoosing(true);
         try{
-            const response=await fetch("http://localhost:8080/api/chat/choose",{
+            const response=await fetch(`${API_BASE_URL}/api/chat/choose`,{
                 method:"POST",
                 headers:{
                     Authorization:`Bearer ${token}`,
@@ -293,7 +294,7 @@ function ChatWindow(){
     // Lets the user go back to side-by-side comparison mode for this thread.
     const resetResponseStyle=async()=>{
         try{
-            const response=await fetch(`http://localhost:8080/api/thread/${currThreadId}/style`,{
+            const response=await fetch(`${API_BASE_URL}/api/thread/${currThreadId}/style`,{
                 method:"PATCH",
                 headers:{
                     Authorization:`Bearer ${token}`,
@@ -320,7 +321,7 @@ function ChatWindow(){
         setShareCopied(false);
         setShareLoading(true);
         try{
-            const response=await fetch(`http://localhost:8080/api/thread/${currThreadId}/share`,{
+            const response=await fetch(`${API_BASE_URL}/api/thread/${currThreadId}/share`,{
                 headers:{ Authorization:`Bearer ${token}` }
             });
             const data=await response.json();
@@ -335,7 +336,7 @@ function ChatWindow(){
     const createShareLink=async()=>{
         setShareLoading(true);
         try{
-            const response=await fetch(`http://localhost:8080/api/thread/${currThreadId}/share`,{
+            const response=await fetch(`${API_BASE_URL}/api/thread/${currThreadId}/share`,{
                 method:"POST",
                 headers:{ Authorization:`Bearer ${token}` }
             });
@@ -355,7 +356,7 @@ function ChatWindow(){
     const revokeShareLink=async()=>{
         setShareLoading(true);
         try{
-            const response=await fetch(`http://localhost:8080/api/thread/${currThreadId}/share`,{
+            const response=await fetch(`${API_BASE_URL}/api/thread/${currThreadId}/share`,{
                 method:"DELETE",
                 headers:{ Authorization:`Bearer ${token}` }
             });
@@ -396,7 +397,7 @@ function ChatWindow(){
         setInstructionSaving(true);
         setInstructionError("");
         try{
-            const response=await fetch(`http://localhost:8080/api/thread/${currThreadId}/instruction`,{
+            const response=await fetch(`${API_BASE_URL}/api/thread/${currThreadId}/instruction`,{
                 method:"PATCH",
                 headers:{
                     Authorization:`Bearer ${token}`,
@@ -423,7 +424,7 @@ function ChatWindow(){
         setInstructionSaving(true);
         setInstructionError("");
         try{
-            const response=await fetch(`http://localhost:8080/api/thread/${currThreadId}/instruction`,{
+            const response=await fetch(`${API_BASE_URL}/api/thread/${currThreadId}/instruction`,{
                 method:"PATCH",
                 headers:{
                     Authorization:`Bearer ${token}`,

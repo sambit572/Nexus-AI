@@ -1,4 +1,5 @@
 import "./Sidebar.css";
+import { API_BASE_URL } from "./config.js";
 import { useContext , useEffect, useState, useRef} from "react";
 import { MyContext } from "./MyContext.jsx";
 import {v1 as uuidv1} from "uuid";
@@ -19,7 +20,7 @@ function Sidebar(){
 
     const getAllThreads=async()=>{
         try {
-            const response=await fetch("http://localhost:8080/api/thread",{
+            const response=await fetch(`${API_BASE_URL}/api/thread`,{
                 headers:{ Authorization:`Bearer ${token}` }
             });
             const res=await response.json();
@@ -32,7 +33,7 @@ function Sidebar(){
 
     const getFolders=async()=>{
         try {
-            const response=await fetch("http://localhost:8080/api/folders",{
+            const response=await fetch(`${API_BASE_URL}/api/folders`,{
                 headers:{ Authorization:`Bearer ${token}` }
             });
             const res=await response.json();
@@ -88,7 +89,7 @@ function Sidebar(){
         setCurrThreadId(newThreadId);
         setIsSidebarOpen(false); // auto-close on mobile after picking a thread
         try{
-            const response=await fetch(`http://localhost:8080/api/thread/${newThreadId}`,{
+            const response=await fetch(`${API_BASE_URL}/api/thread/${newThreadId}`,{
                 headers:{ Authorization:`Bearer ${token}` }
             });
             const res=await response.json();
@@ -109,7 +110,7 @@ function Sidebar(){
 
     const deleteThread=async(threadId)=>{
         try{
-            const response=await fetch(`http://localhost:8080/api/thread/${threadId}`,{
+            const response=await fetch(`${API_BASE_URL}/api/thread/${threadId}`,{
                 method: "DELETE",
                 headers:{ Authorization:`Bearer ${token}` }
             });
@@ -128,7 +129,7 @@ function Sidebar(){
         const name = folderName.trim();
         if(!name) return;
         try{
-            const response=await fetch(`http://localhost:8080/api/thread/${threadId}/folder`,{
+            const response=await fetch(`${API_BASE_URL}/api/thread/${threadId}/folder`,{
                 method:"PATCH",
                 headers:{
                     Authorization:`Bearer ${token}`,

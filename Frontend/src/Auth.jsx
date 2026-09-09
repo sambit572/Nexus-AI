@@ -1,8 +1,8 @@
 import "./Auth.css";
+import { API_BASE_URL } from "./config.js";
 import { useState } from "react";
 
-// Shown whenever there's no valid (unexpired) token in localStorage.
-// Handles both signup and login in one component, toggled with a link.
+
 function Auth({ onAuthSuccess }){
     const [mode,setMode]=useState("signup"); // "signup" | "login"
     const [name,setName]=useState("");
@@ -42,7 +42,7 @@ function Auth({ onAuthSuccess }){
             const endpoint = isSignup ? "signup" : "login";
             const body = isSignup ? {name,email,password} : {email,password};
 
-            const response = await fetch(`http://localhost:8080/api/auth/${endpoint}`,{
+            const response = await fetch(`${API_BASE_URL}/api/auth/${endpoint}`,{
                 method:"POST",
                 headers:{"Content-Type":"application/json"},
                 body: JSON.stringify(body)

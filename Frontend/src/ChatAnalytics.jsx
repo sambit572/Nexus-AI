@@ -1,4 +1,5 @@
 import "./ChatAnalytics.css";
+import { API_BASE_URL } from "./config.js";
 import { useContext, useEffect, useState } from "react";
 import { MyContext } from "./MyContext.jsx";
 import {
@@ -6,7 +7,7 @@ import {
     XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from "recharts";
 
-const API_BASE = "http://localhost:8080/api";
+const API_BASE = `${API_BASE_URL}/api`;
 const SENTIMENT_COLORS = { positive: "#22c55e", neutral: "#8b5cf6", negative: "#ef4444" };
 const QUESTION_LABELS = {
     what: "What", how: "How", why: "Why", when: "When", where: "Where",

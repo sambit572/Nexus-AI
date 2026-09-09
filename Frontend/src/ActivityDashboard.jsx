@@ -1,4 +1,5 @@
 import "./ActivityDashboard.css";
+import { API_BASE_URL } from "./config.js";
 import { useContext, useEffect, useState } from "react";
 import { MyContext } from "./MyContext.jsx";
 import {
@@ -6,7 +7,7 @@ import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid
 } from "recharts";
 
-const API_BASE = "http://localhost:8080/api";
+const API_BASE = `${API_BASE_URL}/api`;
 const DONUT_COLORS = ["#8b5cf6", "#6366f1", "#ec4899", "#0ea5e9", "#22c55e", "#f59e0b"];
 
 function formatDate(dateStr) {

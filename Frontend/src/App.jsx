@@ -1,4 +1,5 @@
 import './App.css';
+import { API_BASE_URL } from "./config.js";
 import Sidebar from "./Sidebar.jsx";
 import ChatWindow from "./ChatWindow.jsx";
 import Auth from "./Auth.jsx";
@@ -85,7 +86,7 @@ function App() {
       return;
     }
     let cancelled=false;
-    fetch("http://localhost:8080/api/auth/me",{
+    fetch(`${API_BASE_URL}/api/auth/me`,{
       headers:{ Authorization:`Bearer ${token}` }
     })
       .then(res=>{

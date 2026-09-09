@@ -7,20 +7,16 @@ import activityRoutes from "./routes/activityRoutes.js";
 import chatAnalyticsRoutes from "./routes/chatAnalyticsRoutes.js";
 import { generalLimiter } from "./middleware/rateLimiter.js";
 
-// This file builds and exports the Express app WITHOUT starting a server
-// or connecting to MongoDB. That separation is what makes the app
-// testable: Supertest can import `app` and fire requests directly at it
-// in-memory, without needing a real network port or a real database
-// (tests connect Mongoose to an in-memory MongoDB instance instead).
-//
-// Server.js is the only place that actually calls app.listen() and
-// connects to the real database - that's the "boot" step, kept separate
-// from "app definition" on purpose.
+
 
 const app = express();
 
 app.use(express.json());
-app.use(cors());
+
+// In production, only allow the deployed frontend to call this API.
+// In development (no FRONTEND_URL set), allow any origin for convenience.
+const FRONTEND_URL = process.env.FRONTEND_URL;
+app.use(cors(FRONTEND_URL ? { origin: FRONTEND_URL } : {}));
 
 // Baseline rate limit for all API routes. Individual routes below
 // (chat, auth) layer stricter limiters on top of this.

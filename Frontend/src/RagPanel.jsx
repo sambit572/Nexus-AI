@@ -1,8 +1,9 @@
 import "./RagPanel.css";
+import { API_BASE_URL } from "./config.js";
 import { useContext, useEffect, useRef, useState } from "react";
 import { MyContext } from "./MyContext.jsx";
 
-const API_BASE = "http://localhost:8080/api";
+const API_BASE = `${API_BASE_URL}/api`;
 
 function formatBytes(chars) {
     if (!chars) return "0 chars";
