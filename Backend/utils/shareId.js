@@ -17,3 +17,24 @@ export function generateShareId(length = 12) {
     }
     return id;
 }
+
+// Share links stop working this long after they are created.
+export const SHARE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+/**
+ * When a thread's share link expires. Uses the stored expiry, and falls
+ * back to sharedAt + 24h for links created before expiry existed so old
+ * links don't live forever.
+ * @returns {Date|null} null if the thread was never shared
+ */
+export function getShareExpiry(thread) {
+    if (!thread || !thread.shareId) return null;
+    if (thread.shareExpiresAt) return new Date(thread.shareExpiresAt);
+    if (thread.sharedAt) return new Date(new Date(thread.sharedAt).getTime() + SHARE_TTL_MS);
+    return new Date(0); // shared but no timestamps at all -> treat as expired
+}
+
+export function isShareExpired(thread) {
+    const expiry = getShareExpiry(thread);
+    return !expiry || expiry.getTime() <= Date.now();
+}

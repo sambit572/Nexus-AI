@@ -72,17 +72,6 @@ const ThreadSchema=new mongoose.Schema({
         type:Number,
         default:0
     },
-    // Public "Share" link support. shareId is only set once the user shares
-    // this thread. The index is unique+sparse, and sparse indexes only
-    // exclude documents where the field is entirely ABSENT - not documents
-    // where it's explicitly set to null. So there's no `default: null`
-    // here on purpose: leaving shareId unset until a thread is actually
-    // shared means Mongoose omits the field entirely on creation, which is
-    // what lets many never-shared threads coexist under one sparse unique
-    // index. (Setting `default: null` here was the bug - it wrote an
-    // explicit null onto every thread, which the sparse index does NOT
-    // treat as absent, so the second thread ever created collided with
-    // the first.)
     shareId:{
         type:String,
         unique:true,
@@ -91,6 +80,11 @@ const ThreadSchema=new mongoose.Schema({
     sharedAt:{
         type:Date,
         default:null
+    },
+    // When the public link stops working (24h after creation). Checked on
+    // every public read; absent for never-shared threads.
+    shareExpiresAt:{
+        type:Date
     },
     messages:[MessageSchema],
     createdAt:{

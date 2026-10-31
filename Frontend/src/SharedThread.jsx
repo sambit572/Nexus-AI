@@ -76,6 +76,10 @@ function SharedThread({ shareId }){
                             thread.sharedAt &&
                             <> &middot; shared {new Date(thread.sharedAt).toLocaleDateString(undefined,{ year:"numeric", month:"short", day:"numeric" })}</>
                         }
+                        {
+                            thread.expiresAt &&
+                            <> &middot; expires {new Date(thread.expiresAt).toLocaleString(undefined,{ day:"numeric", month:"short", hour:"numeric", minute:"2-digit" })}</>
+                        }
                     </p>
                 </div>
 

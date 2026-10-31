@@ -6,7 +6,7 @@
  import { PERSONAS, DEFAULT_PERSONA } from "../utils/personas.js";
  import { RESPONSE_STYLES, RESPONSE_STYLE_LIST } from "../utils/responseStyles.js";
  import { maybeSummarizeThread, getRecentHistory, buildSummaryBlock } from "../utils/summarizer.js";
- import { generateShareId } from "../utils/shareId.js";
+ import { generateShareId, getShareExpiry, isShareExpired, SHARE_TTL_MS } from "../utils/shareId.js";
  import { checkForJailbreakAttempt, hardenSystemPrompt, JAILBREAK_REFUSAL_MESSAGE } from "../utils/guardrails.js";
  import authMiddleware from "../middleware/auth.js";
 
@@ -152,15 +152,22 @@
  router.get("/thread/:threadId/share",async(req,res)=>{
     const {threadId}=req.params;
     try{
-        const thread=await Thread.findOne({threadId,userId:req.user.id}).select("shareId sharedAt");
+        const thread=await Thread.findOne({threadId,userId:req.user.id}).select("shareId sharedAt shareExpiresAt");
         if(!thread){
             return res.status(404).json({error:"thread not found"});
+        }
+        // An expired link counts as "not shared" - clean it up so the
+        // owner can create a fresh one.
+        if(thread.shareId && isShareExpired(thread)){
+            await Thread.updateOne({threadId,userId:req.user.id},{$unset:{shareId:"",sharedAt:"",shareExpiresAt:""}});
+            return res.json({shared:false,shareId:null,shareUrl:null,sharedAt:null,expiresAt:null,expired:true});
         }
         res.json({
             shared: !!thread.shareId,
             shareId: thread.shareId,
             shareUrl: thread.shareId ? buildShareUrl(thread.shareId) : null,
-            sharedAt: thread.sharedAt
+            sharedAt: thread.sharedAt,
+            expiresAt: getShareExpiry(thread)
         });
     } catch(err){
         console.log(err);
@@ -168,7 +175,8 @@
     }
  });
 
- //to create (or return the existing) public read-only link for a thread
+ //to create (or return the existing, still-valid) public read-only link for a thread.
+ //Links are valid for 24 hours; an expired link is replaced with a brand new one.
  router.post("/thread/:threadId/share",async(req,res)=>{
     const {threadId}=req.params;
     try{
@@ -177,7 +185,8 @@
             return res.status(404).json({error:"thread not found"});
         }
 
-        if(!thread.shareId){
+        // Create a new link if there is none, or if the old one expired.
+        if(!thread.shareId || isShareExpired(thread)){
             // Extremely unlikely to collide, but guard against it anyway
             // rather than trusting a single random draw against a unique index.
             let candidate;
@@ -190,16 +199,23 @@
             if(!candidate){
                 return res.status(500).json({error:"Could not generate a unique share link, please try again."});
             }
+            // updateOne instead of thread.save(): save() re-validates every
+            // message on the thread, so one old/invalid message could make
+            // sharing fail. A targeted $set only touches the share fields.
+            const sharedAt=new Date();
+            const shareExpiresAt=new Date(sharedAt.getTime()+SHARE_TTL_MS);
+            await Thread.updateOne({threadId,userId:req.user.id},{$set:{shareId:candidate,sharedAt,shareExpiresAt}});
             thread.shareId=candidate;
-            thread.sharedAt=new Date();
-            await thread.save();
+            thread.sharedAt=sharedAt;
+            thread.shareExpiresAt=shareExpiresAt;
         }
 
         res.json({
             shared:true,
             shareId: thread.shareId,
             shareUrl: buildShareUrl(thread.shareId),
-            sharedAt: thread.sharedAt
+            sharedAt: thread.sharedAt,
+            expiresAt: getShareExpiry(thread)
         });
     } catch(err){
         console.log(err);
@@ -218,7 +234,7 @@
             // ABSENT - an explicit null still counts as a value and would
             // collide with any other unshared thread the next time someone
             // revokes a share link. $unset actually removes the field.
-            {$unset:{shareId:"", sharedAt:""}},
+            {$unset:{shareId:"", sharedAt:"", shareExpiresAt:""}},
             {new:true}
         );
         if(!thread){

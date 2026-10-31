@@ -30,6 +30,7 @@ function ChatWindow(){
     const [shareStatus,setShareStatus]=useState(null); // {shared, shareId, shareUrl, sharedAt} | null
     const [shareLoading,setShareLoading]=useState(false);
     const [shareCopied,setShareCopied]=useState(false);
+    const [shareError,setShareError]=useState("");
     const [instructionOpen,setInstructionOpen]=useState(false);
     const [instructionDraft,setInstructionDraft]=useState("");
     const [instructionSaving,setInstructionSaving]=useState(false);
@@ -319,21 +320,36 @@ function ChatWindow(){
         setPersonaOpen(false);
         setInstructionOpen(false);
         setShareCopied(false);
+        setShareError("");
+        // Clear any status left over from a previously opened thread.
+        setShareStatus(null);
         setShareLoading(true);
         try{
             const response=await fetch(`${API_BASE_URL}/api/thread/${currThreadId}/share`,{
                 headers:{ Authorization:`Bearer ${token}` }
             });
             const data=await response.json();
-            if(response.ok) setShareStatus(data);
+            if(response.ok){
+                setShareStatus(data);
+            } else if(response.status===404){
+                // Thread isn't saved yet (no message sent) - show the
+                // create view; createShareLink explains what to do.
+                setShareStatus({ shared:false, shareId:null, shareUrl:null, sharedAt:null });
+            } else {
+                setShareStatus({ shared:false, shareId:null, shareUrl:null, sharedAt:null });
+                setShareError(data.error || "Couldn't load share status.");
+            }
         } catch(err){
             console.log(err);
+            setShareStatus({ shared:false, shareId:null, shareUrl:null, sharedAt:null });
+            setShareError("Couldn't reach the server. Check your connection.");
         }
         setShareLoading(false);
     }
 
     // Creates (or fetches the existing) public read-only link.
     const createShareLink=async()=>{
+        setShareError("");
         setShareLoading(true);
         try{
             const response=await fetch(`${API_BASE_URL}/api/thread/${currThreadId}/share`,{
@@ -343,17 +359,21 @@ function ChatWindow(){
             const data=await response.json();
             if(response.ok){
                 setShareStatus(data);
+            } else if(response.status===404){
+                setShareError("Send at least one message in this chat before sharing it.");
             } else {
-                console.log(data.error || "Failed to create share link");
+                setShareError(data.error || "Failed to create share link.");
             }
         } catch(err){
             console.log(err);
+            setShareError("Couldn't reach the server. Check your connection.");
         }
         setShareLoading(false);
     }
 
     // Revokes the public link - the URL stops working immediately.
     const revokeShareLink=async()=>{
+        setShareError("");
         setShareLoading(true);
         try{
             const response=await fetch(`${API_BASE_URL}/api/thread/${currThreadId}/share`,{
@@ -363,9 +383,12 @@ function ChatWindow(){
             if(response.ok){
                 setShareStatus({ shared:false, shareId:null, shareUrl:null, sharedAt:null });
                 setShareCopied(false);
+            } else {
+                setShareError("Failed to revoke the link. Please try again.");
             }
         } catch(err){
             console.log(err);
+            setShareError("Couldn't reach the server. Check your connection.");
         }
         setShareLoading(false);
     }
@@ -377,7 +400,22 @@ function ChatWindow(){
             setShareCopied(true);
             setTimeout(()=>setShareCopied(false), 2000);
         } catch(err){
-            console.log(err);
+            // Clipboard API can be blocked (e.g. non-HTTPS); fall back to
+            // the legacy copy path so the button still works.
+            try{
+                const ta=document.createElement("textarea");
+                ta.value=shareStatus.shareUrl;
+                ta.style.position="fixed";
+                ta.style.opacity="0";
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand("copy");
+                document.body.removeChild(ta);
+                setShareCopied(true);
+                setTimeout(()=>setShareCopied(false), 2000);
+            } catch(e){
+                setShareError("Couldn't copy automatically - select the link and copy it manually.");
+            }
         }
     }
 
@@ -621,12 +659,20 @@ function ChatWindow(){
                             <div className="dropDown exportDropDown sharePanel">
                                 <p className="sharePanelTitle">Share this conversation</p>
                                 {
+                                    shareError &&
+                                    <p className="sharePanelHint" style={{color:"#ef4444"}}>{shareError}</p>
+                                }
+                                {
                                     shareLoading && !shareStatus ? (
                                         <p className="sharePanelHint"><i className="fa-solid fa-spinner fa-spin"></i> Loading...</p>
                                     ) : shareStatus?.shared ? (
                                         <>
                                             <p className="sharePanelHint">
                                                 Anyone with this link can view this conversation, read-only, without signing in.
+                                                {
+                                                    shareStatus.expiresAt &&
+                                                    <> This link expires on {new Date(shareStatus.expiresAt).toLocaleString(undefined,{ day:"numeric", month:"short", hour:"numeric", minute:"2-digit" })} (24 hours after creation).</>
+                                                }
                                             </p>
                                             <div className="shareLinkRow">
                                                 <input type="text" readOnly value={shareStatus.shareUrl} onClick={(e)=>e.target.select()} />
@@ -641,7 +687,7 @@ function ChatWindow(){
                                     ) : (
                                         <>
                                             <p className="sharePanelHint">
-                                                Create a public read-only link so anyone can view this conversation without logging in.
+                                                Create a public read-only link so anyone can view this conversation without logging in. The link stays valid for 24 hours.
                                             </p>
                                             <button className="shareCreateBtn" onClick={createShareLink} disabled={shareLoading}>
                                                 {
